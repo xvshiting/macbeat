@@ -1,0 +1,27 @@
+name: Build and test
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  macos:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Test session logic
+        run: swift test
+      - name: Package app and DMG
+        run: bash scripts/package-dmg.sh
+      - uses: actions/upload-artifact@v4
+        with:
+          name: MacBeat-dmg
+          path: |
+            dist/*.dmg
+            dist/*.sha256
+          if-no-files-found: error

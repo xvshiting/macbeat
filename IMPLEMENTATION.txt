@@ -1,0 +1,102 @@
+MacBeat 0.1.3 — native local build
+
+BUILD / RUN
+  bash scripts/build.sh
+  dist/MacBeat.app
+  For a non-mutating UI preview, launch the executable with --preview.
+  The bundle is locally ad-hoc signed, not Developer ID notarized.
+  No installation to /Applications, login item, sudoers rule, daemon,
+  network service or privileged helper is automatically created.
+
+ACCEPTED DESIGN
+  Lightweight menu-bar popover. SwiftUI content hosted by AppKit NSPopover.
+  Duration / exact local date and time / manual stop.
+  Active schedule changes require an explicit Update action.
+  Drafts cannot silently overwrite a running schedule.
+  Closing the popover leaves the session running.
+  With clamshell control OFF the app explicitly says that closing the lid
+  still allows sleep. After wake the idle-prevention session continues,
+  unless its deadline or another stop condition has been reached.
+  Following the physical lid test, product copy describes clamshell keeping
+  awake directly, without the repeated experimental-start alert. Settings
+  retain the compatibility and concurrent-controller caveat. The private
+  power implementation and its limitations below are unchanged.
+  Menu-bar icon: opaque blue/green/amber rounded badge with a white pulse,
+  rendered as a non-template image for contrast in light and dark menus.
+
+POWER ENGINE
+  Separate MacBeatAgent owns IOKit assertions and the optional native
+  RootDomainUserClient kPMSetClamshellSleepState (selector 12) request.
+  No pmset mutation, no power-management plist writes.
+  The native selector is PRIVATE, unsupported, and changes a shared powerd
+  bit. It is NOT a reference-counted, process-scoped resource.
+  It may be overwritten by macOS, and API success is NOT a physical
+  closed-lid test result. Do not run other closed-lid utilities concurrently.
+  Startup checks the actual global SleepDisabled setting before acquiring
+  assertions and refuses if it is set. AppleClamshellCausesSleep is an
+  aggregate policy result (including graphics/desktop mode), NOT evidence
+  of another utility owning the shared bit. False no longer blocks startup.
+  There is no reliable ownership detection for that shared bit; this
+  experimental build must not be used alongside other clamshell controls.
+  A timed session ending restores only MacBeat's state; it never forces sleep.
+
+RECOVERY
+  Main app sends a heartbeat every 2 seconds. Agent stops after 10 seconds
+  without heartbeat, pipe EOF, explicit stop, deadline, low battery,
+  disconnected AC (when enabled), unknown required power state, or serious
+  thermal pressure.
+  Duration uses monotonic uptime; exact deadlines use wall-clock time.
+  Actual sleep ends an experimental clamshell session as a failed test.
+  Actual sleep does NOT end an ordinary idle-prevention session. That
+  session resets its sleep observation baseline and emits a wake notice.
+  Before the private clamshell call a user-local recovery journal is written.
+  A second process waits for agent exit and handles leftover recovery.
+  Startup also handles recovery journals. Restore errors are visible and
+  retried, never announced as successful cleanup.
+  Killing both control and recovery processes, OS bugs, powerd races, or
+  power loss cannot be given an absolute cleanup guarantee.
+  Journal/lock: ~/Library/Application Support/MacBeat/
+
+VALIDATION
+  conda run -n kora swift test
+  conda run -n kora python scripts/verify-agent.py
+  Opt-in bounded private-interface test:
+  conda run -n kora python scripts/verify-agent.py --clamshell
+  Run the integration check with the lid OPEN and other sleep tools stopped.
+  Real lid testing requires the user to close and reopen the laptop. The
+  app reports observed closed duration, and compares continuous vs uptime
+  clocks to detect actual sleep. One successful observation is not a
+  compatibility guarantee for other power/display/macOS configurations.
+
+CURRENT MACHINE TEST
+  2026-10-04, macOS 27.0 (26A428), Apple silicon, battery, lid open.
+  Reproduced 0.1.0: --clamshell returned running=false with the false
+  conflict error, while public-only sessions started and stopped normally.
+  0.1.1: the same --clamshell integration check returns running=true and
+  stopped=true, no errors, no remaining MacBeat assertions or journal.
+  11 core tests and 2 controller tests pass. A rejected start followed by
+  the agent cleanup message now stays visibly failed and can be retried;
+  an update rejection does not terminate a running session.
+  0.1.2: replayed the reported ordinary-mode 23:12:19 -> 23:12:42
+  clamshell sleep/wake interval. The previous unconditional sleep stop was
+  reproduced in the session policy and fixed to apply only to clamshell
+  sessions. 14 policy tests and 3 controller tests pass, including retaining
+  an ordinary session across wake and stopping an expired absolute deadline.
+  Physical test passed on 2026-10-05 in the current machine/configuration:
+  the read-only observer recorded the lid continuously closed from
+  10:08:47 to 10:16:55 +08:00 (about 8 minutes 8 seconds). Its one-second
+  heartbeat continued, continuous-minus-absolute clock sleep delta stayed
+  at zero, and pmset showed no sleep entries in that interval. Clamshell
+  control was enabled; MacBeatAgent remained active after reopening.
+  Evidence: .build/lid-observation-20261005.jsonl (583 samples over 10 min).
+  This is a physical observation, not a compatibility guarantee across
+  other hardware, OS versions, displays, or power configurations.
+
+PRIMARY REFERENCES
+  https://github.com/apple-oss-distributions/xnu/blob/main/iokit/Kernel/RootDomainUserClient.cpp
+  https://github.com/apple-oss-distributions/xnu/blob/main/iokit/Kernel/IOPMrootDomain.cpp
+  https://github.com/apple-oss-distributions/IOKitUser/blob/main/pwr_mgt.subproj/IOPMLib.h
+
+DESIGN ARTIFACTS
+  prototype/index.html: selected interactive design with absolute deadline.
+  prototype/archive-three-variants.html: original alternatives retained.

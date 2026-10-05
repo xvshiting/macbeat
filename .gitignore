@@ -1,0 +1,10 @@
+.build/
+dist/
+.DS_Store
+.swiftpm/
+*.dmg
+*.zip
+*.dSYM/
+__pycache__/
+.env
+.env.*
