@@ -8,7 +8,7 @@ struct PopoverView: View {
     @State private var dateOpen = false
     private enum Page { case session, plan, health }
     private var contentHeight: CGFloat {
-        let desired: CGFloat = model.showSettings ? 570 : page == .plan ? 610 : page == .health ? 510 : model.mode == .duration ? 535 : model.mode == .deadline ? 350 : 340
+        let desired: CGFloat = model.showSettings ? 570 : page == .plan ? 610 : page == .health ? 510 : 535
         return min(desired, (NSScreen.main?.visibleFrame.height ?? 900) - 210)
     }
     var body: some View {
@@ -110,15 +110,17 @@ struct PopoverView: View {
                     }
             }
             Divider().overlay(BeatStyle.line)
+            Spacer(minLength: 6)
             Text("结束于").font(.system(size: 10)).foregroundStyle(BeatStyle.muted)
             HStack { TimeDigits(value: deadlineMinutes, size: 40, label: "结束"); Spacer(); Text("本地时间").font(.system(size: 9)).foregroundStyle(BeatStyle.muted) }
+            Spacer(minLength: 6)
             HStack(spacing: 7) {
                 ForEach([15,30,60], id: \.self) { minute in
                     Button(minute == 60 ? "＋1 小时" : "＋\(minute) 分钟") { model.deadline = model.deadline.addingTimeInterval(Double(minute) * 60) }
                         .buttonStyle(.plain).font(.system(size: 10)).foregroundStyle(BeatStyle.muted).padding(6).background(BeatStyle.surface, in: RoundedRectangle(cornerRadius: 6))
                 }
             }
-        }.beatCard()
+        }.frame(minHeight: 268).beatCard()
     }
     private func dayButton(_ title: String, offset: Int) -> some View {
         let day = Calendar.current.date(byAdding: .day, value: offset, to: model.now) ?? model.now
@@ -131,11 +133,13 @@ struct PopoverView: View {
     private var unlimited: some View {
         VStack(alignment: .leading, spacing: 10) {
             Text("AT YOUR OWN PACE").font(.system(size: 8)).tracking(1.2).foregroundStyle(BeatStyle.muted)
+            Spacer(minLength: 12)
             HStack { Text("不限时").font(.system(size: 29, weight: .medium)); Spacer(); Image(systemName: "infinity").font(.system(size: 48, weight: .ultraLight)).foregroundStyle(BeatStyle.blue.opacity(0.25)).accessibilityHidden(true) }
             Text("结束的时刻，由你决定。").font(.system(size: 10)).foregroundStyle(BeatStyle.muted)
+            Spacer(minLength: 12)
             HStack(spacing: 6) { Circle().fill(BeatStyle.blue.opacity(0.5)).frame(width: 5, height: 5); Rectangle().fill(LinearGradient(colors: [BeatStyle.blue.opacity(0.4), .clear], startPoint: .leading, endPoint: .trailing)).frame(height: 1); Text("···").foregroundStyle(BeatStyle.muted) }.padding(.top, 7)
             HStack { Text("开启后持续运行"); Spacer(); Text("随时手动停止") }.font(.system(size: 9)).foregroundStyle(BeatStyle.muted)
-        }.padding(20).background(LinearGradient(colors: [.white, BeatStyle.blue.opacity(0.07)], startPoint: .bottomLeading, endPoint: .topTrailing), in: RoundedRectangle(cornerRadius: 15)).overlay(RoundedRectangle(cornerRadius: 15).stroke(BeatStyle.line, lineWidth: 0.7))
+        }.frame(minHeight: 260).padding(20).background(LinearGradient(colors: [.white, BeatStyle.blue.opacity(0.07)], startPoint: .bottomLeading, endPoint: .topTrailing), in: RoundedRectangle(cornerRadius: 15)).overlay(RoundedRectangle(cornerRadius: 15).stroke(BeatStyle.line, lineWidth: 0.7))
     }
     private func detail(_ symbol: String, _ label: String, _ value: String) -> some View {
         HStack(spacing: 8) { Image(systemName: symbol).frame(width: 15).foregroundStyle(BeatStyle.muted); Text(label); Spacer(minLength: 6); Text(value).font(.system(size: 9)).foregroundStyle(BeatStyle.muted).multilineTextAlignment(.trailing) }.font(.system(size: 11))
