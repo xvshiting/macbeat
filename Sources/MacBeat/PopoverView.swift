@@ -39,46 +39,53 @@ struct PopoverView: View {
                 HStack {
                     Text("何时结束")
                     Spacer()
-                    Text(model.running ? "修改后点击更新" : "到时恢复系统睡眠策略").foregroundStyle(.tertiary)
+                    Text(model.scheduledSession && model.active ? "每日定时会话" : model.running ? "修改后点击更新" : "到时恢复系统睡眠策略").foregroundStyle(.tertiary)
                 }.font(.system(size: 10)).foregroundStyle(.secondary)
-                Picker("结束方式", selection: $model.mode) {
-                    ForEach(EndMode.allCases, id: \.self) { Text($0.title).tag($0) }
-                }.pickerStyle(.segmented).labelsHidden().disabled(model.busy)
-                if model.mode == .duration {
-                    HStack(spacing: 7) {
-                        ForEach([1800.0, 3600, 7200], id: \.self) { seconds in
-                            Button { model.duration = seconds } label: {
-                                Text(seconds == 1800 ? "30 分钟" : "\(Int(seconds / 3600)) 小时")
-                                    .font(.system(size: 11)).frame(maxWidth: .infinity).padding(.vertical, 9)
-                                    .background(model.duration == seconds ? blue.opacity(0.12) : Color.white.opacity(0.5), in: RoundedRectangle(cornerRadius: 7))
-                                    .foregroundStyle(model.duration == seconds ? blue : .secondary)
-                            }.buttonStyle(.plain).disabled(model.busy)
-                        }
-                    }
-                } else if model.mode == .deadline {
-                    VStack(alignment: .leading, spacing: 8) {
-                        Label("结束时间", systemImage: "clock").font(.system(size: 10)).foregroundStyle(.secondary)
-                        DatePicker("结束日期和时间", selection: $model.deadline, displayedComponents: [.date, .hourAndMinute])
-                            .datePickerStyle(.field).labelsHidden().font(.system(size: 15)).disabled(model.busy)
-                            .accessibilityLabel("结束日期和时间")
-                    }.frame(maxWidth: .infinity, alignment: .leading).padding(12).background(.white.opacity(0.65), in: RoundedRectangle(cornerRadius: 9))
-                    HStack(spacing: 8) {
-                        dateShortcut("今天", offset: 0); dateShortcut("明天", offset: 1)
-                        Spacer(); Text("本机当地时间").font(.system(size: 9)).foregroundStyle(.tertiary)
-                    }
+                if model.scheduledSession && model.active {
+                    Label("每日定时 · " + (model.end?.formatted(.dateTime.month().day().hour().minute()) ?? "") + " 结束", systemImage: "calendar.badge.clock")
+                        .font(.system(size: 12)).foregroundStyle(blue)
+                        .frame(maxWidth: .infinity, alignment: .leading).padding(12)
+                        .background(.white.opacity(0.65), in: RoundedRectangle(cornerRadius: 9))
                 } else {
-                    Text("保持运行，直到你手动停止。").font(.system(size: 11)).foregroundStyle(.secondary).frame(maxWidth: .infinity, alignment: .leading).padding(.vertical, 8)
-                }
-                if let error = model.validation {
-                    Text(error).font(.system(size: 10)).foregroundStyle(.orange).frame(maxWidth: .infinity, alignment: .leading)
-                } else if model.mode != .manual, let date = try? model.plan.endDate(now: model.now) {
-                    Text(date.formatted(.dateTime.month().day().hour().minute()) + " 结束保持运行")
-                        .font(.system(size: 10)).foregroundStyle(.secondary).frame(maxWidth: .infinity, alignment: .leading)
-                }
-                if model.running {
-                    Button("更新结束时间") { model.update() }
-                        .buttonStyle(.bordered).tint(blue).controlSize(.small).frame(maxWidth: .infinity)
-                        .disabled(!model.changed || model.validation != nil)
+                    Picker("结束方式", selection: $model.mode) {
+                        ForEach(EndMode.allCases, id: \.self) { Text($0.title).tag($0) }
+                    }.pickerStyle(.segmented).labelsHidden().disabled(model.busy)
+                    if model.mode == .duration {
+                        HStack(spacing: 7) {
+                            ForEach([1800.0, 3600, 7200], id: \.self) { seconds in
+                                Button { model.duration = seconds } label: {
+                                    Text(seconds == 1800 ? "30 分钟" : "\(Int(seconds / 3600)) 小时")
+                                        .font(.system(size: 11)).frame(maxWidth: .infinity).padding(.vertical, 9)
+                                        .background(model.duration == seconds ? blue.opacity(0.12) : Color.white.opacity(0.5), in: RoundedRectangle(cornerRadius: 7))
+                                        .foregroundStyle(model.duration == seconds ? blue : .secondary)
+                                }.buttonStyle(.plain).disabled(model.busy)
+                            }
+                        }
+                    } else if model.mode == .deadline {
+                        VStack(alignment: .leading, spacing: 8) {
+                            Label("结束时间", systemImage: "clock").font(.system(size: 10)).foregroundStyle(.secondary)
+                            DatePicker("结束日期和时间", selection: $model.deadline, displayedComponents: [.date, .hourAndMinute])
+                                .datePickerStyle(.field).labelsHidden().font(.system(size: 15)).disabled(model.busy)
+                                .accessibilityLabel("结束日期和时间")
+                        }.frame(maxWidth: .infinity, alignment: .leading).padding(12).background(.white.opacity(0.65), in: RoundedRectangle(cornerRadius: 9))
+                        HStack(spacing: 8) {
+                            dateShortcut("今天", offset: 0); dateShortcut("明天", offset: 1)
+                            Spacer(); Text("本机当地时间").font(.system(size: 9)).foregroundStyle(.tertiary)
+                        }
+                    } else {
+                        Text("保持运行，直到你手动停止。").font(.system(size: 11)).foregroundStyle(.secondary).frame(maxWidth: .infinity, alignment: .leading).padding(.vertical, 8)
+                    }
+                    if let error = model.validation {
+                        Text(error).font(.system(size: 10)).foregroundStyle(.orange).frame(maxWidth: .infinity, alignment: .leading)
+                    } else if model.mode != .manual, let date = try? model.plan.endDate(now: model.now) {
+                        Text(date.formatted(.dateTime.month().day().hour().minute()) + " 结束保持运行")
+                            .font(.system(size: 10)).foregroundStyle(.secondary).frame(maxWidth: .infinity, alignment: .leading)
+                    }
+                    if model.running {
+                        Button("更新结束时间") { model.update() }
+                            .buttonStyle(.bordered).tint(blue).controlSize(.small).frame(maxWidth: .infinity)
+                            .disabled(!model.changed || model.validation != nil)
+                    }
                 }
                 VStack(spacing: 0) {
                     detail("laptopcomputer", title: "合盖保持运行", value: model.clamshellStatus)
@@ -99,6 +106,14 @@ struct PopoverView: View {
                 }.buttonStyle(.plain).disabled(model.busy || (!model.running && model.phase != "error" && model.validation != nil))
                 if model.running { Text(model.remaining).font(.system(size: 10, design: .monospaced)).foregroundStyle(.secondary) }
                 if !model.message.isEmpty { Text(model.message).font(.system(size: 10)).foregroundStyle(model.phase == "error" || model.startFailed ? Color.orange : .secondary).fixedSize(horizontal: false, vertical: true) }
+                if model.savedDailySchedule.enabled {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Label(model.scheduleSummary, systemImage: "calendar.badge.clock")
+                        Text(model.nextScheduleText)
+                        if !model.scheduleNotice.isEmpty { Text(model.scheduleNotice) }
+                    }.font(.system(size: 10)).foregroundStyle(.secondary)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                }
                 if model.preview { Text("界面预览 · 不改变系统状态").font(.system(size: 9)).foregroundStyle(.secondary) }
             }.padding(.horizontal, 18).padding(.bottom, 16)
             Divider()
@@ -123,13 +138,46 @@ struct PopoverView: View {
             model.deadline = Calendar.current.date(bySettingHour: parts.hour ?? 18, minute: parts.minute ?? 0, second: 0, of: day)!
         }.buttonStyle(.bordered).controlSize(.mini).disabled(model.busy)
     }
+    private func scheduleTime(start: Bool) -> Binding<Date> {
+        Binding(get: {
+            let minute = start ? model.dailySchedule.startMinute : model.dailySchedule.endMinute
+            return Calendar.current.date(bySettingHour: max(0, min(23, minute / 60)), minute: max(0, min(59, minute % 60)), second: 0, of: model.now) ?? model.now
+        }, set: { date in
+            let parts = Calendar.current.dateComponents([.hour, .minute], from: date)
+            let minute = (parts.hour ?? 0) * 60 + (parts.minute ?? 0)
+            if start { model.dailySchedule.startMinute = minute }
+            else { model.dailySchedule.endMinute = minute }
+        })
+    }
     private var settings: some View {
+        ScrollView {
         VStack(alignment: .leading, spacing: 17) {
             HStack {
                 Button { model.showSettings = false; model.saveSettings() } label: { Image(systemName: "chevron.left") }.buttonStyle(.plain)
                 Text("设置").font(.system(size: 17, weight: .semibold))
                 Spacer()
             }
+            Toggle("每日定时", isOn: $model.dailySchedule.enabled)
+            if model.dailySchedule.enabled {
+                DatePicker("自动开启", selection: scheduleTime(start: true), displayedComponents: .hourAndMinute)
+                    .datePickerStyle(.field)
+                DatePicker(model.dailySchedule.crossesMidnight ? "次日关闭" : "自动关闭", selection: scheduleTime(start: false), displayedComponents: .hourAndMinute)
+                    .datePickerStyle(.field)
+                Text("每天按本机当地时间运行，支持跨午夜。当前在尚未执行的时段内，保存后即可开启。")
+                    .font(.system(size: 10)).foregroundStyle(.secondary)
+            }
+            if let error = model.scheduleValidation {
+                Text(error).font(.system(size: 10)).foregroundStyle(.orange)
+            }
+            Button("保存每日定时") { model.saveDailySchedule() }
+                .buttonStyle(.borderedProminent).tint(blue)
+                .disabled(!model.scheduleChanged || model.scheduleValidation != nil)
+            if !model.scheduleNotice.isEmpty { Text(model.scheduleNotice).font(.system(size: 10)).foregroundStyle(.secondary) }
+            Text("需保持 MacBeat 运行，建议开启登录启动。不会唤醒已休眠或关机的电脑；若在时段内唤醒，会补开到结束时间。")
+                .font(.system(size: 10)).foregroundStyle(.secondary)
+            Text("手动停止、开启失败或保护停止后，本次时段不再重试。已有手动会话时跳过本次定时；定时关闭只结束自动会话。")
+                .font(.system(size: 10)).foregroundStyle(.secondary)
+            Divider()
             Text("运行条件").font(.system(size: 10)).foregroundStyle(.secondary)
             Toggle("仅接通电源时运行", isOn: $model.powerOnly)
             HStack {
@@ -147,7 +195,7 @@ struct PopoverView: View {
             Divider()
             Toggle("登录时启动 MacBeat", isOn: Binding(get: { model.loginEnabled }, set: { model.setLogin($0) }))
             if !model.loginNotice.isEmpty { Text(model.loginNotice).font(.system(size: 10)).foregroundStyle(.orange) }
-            Text("登录后在菜单栏待命，不自动开启保持运行。").font(.system(size: 10)).foregroundStyle(.secondary)
+            Text("未启用每日定时时，登录后只在菜单栏待命；启用后会检查当前运行时段。").font(.system(size: 10)).foregroundStyle(.secondary)
             Divider()
             HStack {
                 Text("MacBeat \(Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "开发版")").foregroundStyle(.secondary)
@@ -156,6 +204,7 @@ struct PopoverView: View {
             }.font(.system(size: 10))
             if model.active { Text("运行条件将在停止后允许修改。").font(.system(size: 10)).foregroundStyle(.secondary) }
         }.font(.system(size: 12)).toggleStyle(.switch).padding(20)
+        }.frame(height: 610)
             .disabled(model.active)
             .overlay(alignment: .topLeading) {
                 if model.active { Button { model.showSettings = false } label: { Image(systemName: "chevron.left").padding(20) }.buttonStyle(.plain) }

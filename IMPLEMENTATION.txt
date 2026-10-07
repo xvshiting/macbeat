@@ -100,3 +100,13 @@ PRIMARY REFERENCES
 DESIGN ARTIFACTS
   prototype/index.html: selected interactive design with absolute deadline.
   prototype/archive-three-variants.html: original alternatives retained.
+
+
+v0.2.0 每日定时（2026-10-07）
+- DailySchedule 保存当地分钟数；Calendar 生成同日或跨日窗口，处理 DST。
+- 设置草稿显式保存；默认关闭。会话采用已有 deadline 协议，由 agent 执行结束及全部电源保护。
+- 运行中的应用每秒检查，时段内可补开；不申请定时唤醒、不安装启动守护进程。
+- 启动前持久记录窗口起点，停止/失败/重启后不重复尝试同一窗口；手动会话优先。
+- 退出时暂停调度，避免退出清理期间启动新会话。
+- 预览使用隔离偏好，不写入用户设置。dev.macbeat.preview 包 ID 支持无系统副作用的原生界面验收。
+- 36 项单元测试；未新增物理合盖测试，原电源保持实现未改变。

@@ -7,9 +7,17 @@ import MacBeatCore
     @Published var mode: EndMode = .duration
     @Published var duration: Double = 7200
     @Published var deadline = Date().addingTimeInterval(7200)
-    @Published var powerOnly = UserDefaults.standard.object(forKey: "powerOnly") as? Bool ?? true
-    @Published var batteryThreshold = UserDefaults.standard.object(forKey: "batteryThreshold") as? Int ?? 20
-    @Published var clamshell = UserDefaults.standard.object(forKey: "clamshell") as? Bool ?? true
+    @Published var powerOnly: Bool
+    @Published var batteryThreshold: Int
+    @Published var clamshell: Bool
+    @Published var dailySchedule: DailySchedule
+    @Published private(set) var savedDailySchedule: DailySchedule
+    @Published private(set) var scheduledSession = false
+    @Published var scheduleNotice = ""
+    private let defaults: UserDefaults
+    private let persistSettings: Bool
+    private var lastScheduledStart: Date?
+    var schedulingPaused = false
     @Published var phase = "idle"
     @Published var message = ""
     @Published var power: PowerSnapshot?
@@ -82,37 +90,55 @@ import MacBeatCore
         return URL(fileURLWithPath: CommandLine.arguments[0]).deletingLastPathComponent().appendingPathComponent("MacBeatAgent")
     }
 
-    init(preview: Bool = false) {
+    init(preview: Bool = false, defaults: UserDefaults? = nil, automaticTicks: Bool = true) {
         self.preview = preview
+        self.persistSettings = !preview || defaults != nil
+        let settings = defaults ?? (preview ? UserDefaults(suiteName: "MacBeat.preview.\(UUID().uuidString)")! : .standard)
+        self.defaults = settings
+        powerOnly = settings.object(forKey: "powerOnly") as? Bool ?? true
+        batteryThreshold = settings.object(forKey: "batteryThreshold") as? Int ?? 20
+        clamshell = settings.object(forKey: "clamshell") as? Bool ?? true
+        let schedule = settings.data(forKey: "dailySchedule").flatMap { try? JSONDecoder().decode(DailySchedule.self, from: $0) } ?? DailySchedule()
+        dailySchedule = schedule
+        savedDailySchedule = schedule
+        lastScheduledStart = settings.object(forKey: "lastScheduledStart") as? Date
         if preview { power = PowerSnapshot(onAC: true, battery: 86, lidClosed: false, thermal: 0) }
-        timer = Timer(timeInterval: 1, repeats: true) { [weak self] _ in
-            Task { @MainActor in self?.tick() }
+        if automaticTicks {
+            timer = Timer(timeInterval: 1, repeats: true) { [weak self] _ in
+                Task { @MainActor in self?.tick() }
+            }
+            if let timer { RunLoop.main.add(timer, forMode: .common) }
         }
-        if let timer { RunLoop.main.add(timer, forMode: .common) }
         if !preview {
             let journal = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Library/Application Support/MacBeat/clamshell-recovery.json")
             if FileManager.default.fileExists(atPath: journal.path) { recover() }
             else { inspect() }
         }
     }
-    func tick() {
-        now = Date()
+    func tick(at date: Date = Date()) {
+        now = date
         if active, now.timeIntervalSince(lastHeartbeat) >= 2 {
             lastHeartbeat = now
             if !preview { send(AgentCommand("heartbeat")) }
         }
-        if preview, running, let end, now >= end { stop() }
+        if preview, running, let end, now >= end { stop(manual: false) }
         if !active, !preview, Int(now.timeIntervalSince1970) % 10 == 0 { inspect() }
+        evaluateDailySchedule(at: now)
         statusChanged?()
     }
     func start() {
-        guard !active, process == nil else { return }
-        guard validation == nil else { message = validation ?? ""; return }
+        startSession(plan, scheduled: false)
+    }
+    private func startSession(_ sessionPlan: SessionPlan, scheduled: Bool) {
+        guard !active, phase != "error", process == nil else { return }
+        do { _ = try sessionPlan.endDate(now: now) }
+        catch { message = error.localizedDescription; return }
         saveSettings()
+        scheduledSession = scheduled
         message = ""; phase = "starting"; receivedStop = false; closedSeconds = 0
         if preview {
-            appliedPlan = plan; end = try? plan.endDate(now: now); phase = "running"
-            requestedClamshell = clamshell; message = "界面预览，没有修改系统状态。"; return
+            appliedPlan = sessionPlan; end = try? sessionPlan.endDate(now: now); phase = "running"
+            requestedClamshell = sessionPlan.requestClamshell; message = "界面预览，没有修改系统状态。"; return
         }
         activity = ProcessInfo.processInfo.beginActivity(options: .userInitiatedAllowingIdleSystemSleep, reason: "MacBeat session heartbeat")
         let task = Process()
@@ -141,21 +167,28 @@ import MacBeatCore
                     self.statusChanged?()
                 }
             }
-            pendingPlan = plan
-            send(AgentCommand("start", plan: plan))
+            pendingPlan = sessionPlan
+            send(AgentCommand("start", plan: sessionPlan))
         }
         catch { phase = "startFailed"; message = error.localizedDescription; input = nil; output = nil; process = nil; releaseActivity() }
     }
     func update() {
-        guard running, validation == nil else { return }
+        guard running, !scheduledSession, validation == nil else { return }
         if preview { end = try? plan.endDate(now: now); appliedPlan = plan; return }
         pendingPlan = plan; updating = true
         send(AgentCommand("update", plan: plan))
         // Applied state is committed only after the agent acknowledges the update.
     }
-    func stop() {
+    func stop(manual: Bool = true) {
         guard active || phase == "error" else { safeToQuit?(); return }
-        if preview { phase = "idle"; end = nil; message = "已结束预览会话"; safeToQuit?(); return }
+        if manual, let window = savedDailySchedule.currentWindow(at: now),
+           lastScheduledStart.map({ $0 < window.start }) ?? true {
+            lastScheduledStart = window.start
+            if persistSettings { defaults.set(window.start, forKey: "lastScheduledStart") }
+        }
+        if preview {
+            if scheduledSession { scheduleNotice = manual ? "本次定时已手动停止。" : "本次定时已到结束时间。" }
+            phase = "idle"; scheduledSession = false; end = nil; message = "已结束预览会话"; safeToQuit?(); return }
         guard process?.isRunning == true else { recover(); return }
         phase = "stopping"; send(AgentCommand("stop"))
     }
@@ -184,6 +217,7 @@ import MacBeatCore
             if let snapshot = event.power { power = snapshot }
             switch event.kind {
             case "running":
+                if scheduledSession { scheduleNotice = "已按每日定时开启。" }
                 phase = "running"; end = event.end; appliedPlan = pendingPlan ?? appliedPlan
                 pendingPlan = nil; updating = false
                 requestedClamshell = event.clamshellRequested ?? false; message = ""
@@ -191,13 +225,17 @@ import MacBeatCore
                 end = event.end; closedSeconds = event.closedSeconds ?? 0
             case "notice": message = event.message
             case "error":
-                if phase == "starting" { phase = "startFailed" }
+                if phase == "starting" {
+                    phase = "startFailed"
+                    if scheduledSession { scheduleNotice = "本次定时开启失败，下一时段再尝试。" }
+                }
                 message = event.message; updating = false; pendingPlan = nil
             case "recoveryError": phase = "recovering"; message = event.message
             case "stopped":
+                if scheduledSession && !startFailed { scheduleNotice = "本次定时已结束：\(event.message)。" }
                 receivedStop = true
                 if !startFailed { phase = "idle" }
-                end = nil; updating = false; pendingPlan = nil
+                end = nil; scheduledSession = false; updating = false; pendingPlan = nil
                 if !startFailed { message = event.message }
                 safeToQuit?()
             default: break
@@ -227,9 +265,71 @@ import MacBeatCore
         }
     }
     func saveSettings() {
-        UserDefaults.standard.set(powerOnly, forKey: "powerOnly")
-        UserDefaults.standard.set(batteryThreshold, forKey: "batteryThreshold")
-        UserDefaults.standard.set(clamshell, forKey: "clamshell")
+        guard persistSettings else { return }
+        defaults.set(powerOnly, forKey: "powerOnly")
+        defaults.set(batteryThreshold, forKey: "batteryThreshold")
+        defaults.set(clamshell, forKey: "clamshell")
+    }
+    var scheduleValidation: String? {
+        dailySchedule.enabled && !dailySchedule.isValid ? "开启与关闭时间不能相同，且必须是有效时间。" : nil
+    }
+    var scheduleChanged: Bool { dailySchedule != savedDailySchedule }
+    var scheduleSummary: String {
+        guard savedDailySchedule.enabled else { return "每日定时未开启" }
+        guard savedDailySchedule.isValid else { return "每日定时无效，请重新设置" }
+        let start = Self.clockText(savedDailySchedule.startMinute)
+        let end = Self.clockText(savedDailySchedule.endMinute)
+        return "每天 \(start) — \(savedDailySchedule.crossesMidnight ? "次日 " : "")\(end)"
+    }
+    private static func clockText(_ minute: Int) -> String {
+        String(format: "%02d:%02d", minute / 60, minute % 60)
+    }
+    var nextScheduleText: String {
+        guard savedDailySchedule.enabled, savedDailySchedule.isValid else { return "" }
+        if scheduledSession && active { return "本次由每日定时开启，到时自动结束。" }
+        if let window = savedDailySchedule.nextWindow(after: now) {
+            return "下次开启：" + window.start.formatted(.dateTime.month().day().hour().minute())
+        }
+        return ""
+    }
+    func saveDailySchedule(at date: Date = Date(), calendar: Calendar = .current) {
+        guard !active, scheduleValidation == nil else { return }
+        savedDailySchedule = dailySchedule
+        if persistSettings, let data = try? JSONEncoder().encode(dailySchedule) {
+            defaults.set(data, forKey: "dailySchedule")
+        }
+        saveSettings()
+        scheduleNotice = dailySchedule.enabled ? "已保存每日定时。" : "已关闭每日定时。"
+        now = date
+        evaluateDailySchedule(at: date, calendar: calendar)
+    }
+    func evaluateDailySchedule(at date: Date, calendar: Calendar = .current) {
+        guard !schedulingPaused,
+              let window = savedDailySchedule.currentWindow(at: date, calendar: calendar),
+              lastScheduledStart.map({ $0 < window.start }) ?? true else { return }
+        // Consume before launching. A stop, failure, crash, or relaunch must not
+        // restart this window or bypass battery/thermal protections.
+        lastScheduledStart = window.start
+        if persistSettings { defaults.set(window.start, forKey: "lastScheduledStart") }
+        guard !active, process == nil, phase != "error" else {
+            scheduleNotice = "本次定时已跳过：已有会话运行或状态尚未恢复。"
+            return
+        }
+        now = date
+        let scheduledPlan = SessionPlan(mode: .deadline, deadline: window.end,
+                                        powerOnly: powerOnly, batteryThreshold: batteryThreshold,
+                                        requestClamshell: clamshell)
+        // Production uses the agent's fresh power reading, not the last idle
+        // snapshot (which may predate sleep). Preview simulates that same policy.
+        if preview, let power, let reason = SessionPolicy.stopReason(plan: scheduledPlan, end: window.end,
+                                                           now: date, power: power, heartbeatAge: 0) {
+            scheduleNotice = "本次定时未开启：\(reason.rawValue)。下次定时再尝试。"
+            return
+        }
+        scheduleNotice = "正在按每日定时开启…"
+        startSession(scheduledPlan, scheduled: true)
+        if running { scheduleNotice = "已按每日定时开启。" }
+        else if startFailed { scheduleNotice = "本次定时开启失败，下一时段再尝试。" }
     }
     func setLogin(_ enabled: Bool) {
         if preview { loginEnabled = enabled; return }

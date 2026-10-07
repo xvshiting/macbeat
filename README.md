@@ -13,7 +13,7 @@
 <p align="center"><strong>English</strong> · <a href="README.zh-CN.md">简体中文</a></p>
 <p align="center">
   <a href="https://xvshiting.github.io/macbeat/"><strong>Website</strong></a> ·
-  <a href="https://github.com/xvshiting/macbeat/releases/tag/v0.1.3"><strong>Download DMG</strong></a> ·
+  <a href="https://github.com/xvshiting/macbeat/releases/tag/v0.2.0"><strong>Download DMG</strong></a> ·
   <a href="#getting-started">Getting started</a> ·
   <a href="#compatibility-and-real-world-testing">Compatibility</a> ·
   <a href="#build-from-source">Build from source</a>
@@ -34,7 +34,8 @@ Keep downloads, computations, and local services running while you step away. St
 | Manual stop | Continue until you stop the session or a protection condition is reached |
 | Adjust an active session | Changes take effect only after you apply the updated end time |
 | Battery and thermal protection | Optional AC-only operation, low-battery threshold, and stopping under elevated thermal pressure |
-| Launch at login | Starts in standby; never automatically starts a keep-awake session |
+| Daily schedule | Automatically starts and stops every day at local times, including overnight windows |
+| Launch at login | Starts in standby, or checks the current window if you enabled a daily schedule |
 
 The menu bar icon uses a white heartbeat on a colored background: **blue** for standby, **green** for an active session, and **amber** when attention is needed. It stays visible on light and dark menu bars.
 
@@ -42,7 +43,7 @@ The menu bar icon uses a white heartbeat on a colored background: **blue** for s
 
 ## Download and install
 
-1. Download `MacBeat-0.1.3-arm64.dmg` from [Releases](https://github.com/xvshiting/macbeat/releases/tag/v0.1.3).
+1. Download `MacBeat-0.2.0-arm64.dmg` from [Releases](https://github.com/xvshiting/macbeat/releases/tag/v0.2.0).
 2. Open the DMG and **drag MacBeat.app into Applications**.
 3. Open MacBeat from Applications. Find its heartbeat icon in the menu bar; it has no Dock icon.
 
@@ -57,7 +58,7 @@ Confirm that the file came from this repository's Release and verify its checksu
 Download the `.sha256` file from the same release, then run this in your download directory:
 
 ```sh
-shasum -a 256 -c MacBeat-0.1.3-arm64.dmg.sha256
+shasum -a 256 -c MacBeat-0.2.0-arm64.dmg.sha256
 ```
 
 To update, stop your session and quit the old version before replacing the app. Start a new session after reopening it.
@@ -69,6 +70,17 @@ To update, stop your session and quit the old version before replacing the app. 
 3. Choose a duration (按时长), an exact end time (到时间), or manual stop (手动停止). Click the blue start button (开启保持运行).
 4. The icon turns green and the panel reports an active session. You can close the panel.
 5. When the timer ends or you stop the session, MacBeat releases its requests and returns control to the system's sleep policy. It does not force your Mac to sleep immediately.
+
+### Daily automatic start and stop
+
+In **Settings → Daily schedule** (设置 → 每日定时), turn the option on, choose the start and end times, and click **Save daily schedule** (保存每日定时). It is disabled by default. For example, 09:00–18:00 runs each day during work hours; 22:00–02:00 ends the following morning. Equal start and end times are rejected.
+
+- MacBeat must be running. Enable **Launch at login** if you want the schedule available after signing in. This feature does not wake a sleeping Mac or power on a shut-down Mac.
+- Saving a schedule, launching the app, or waking during an unhandled window starts a session until that window's original end. A fully missed window is skipped.
+- Each window is attempted once. Manual stop, startup failure, low battery, or thermal protection does not cause repeated starts in the same window, including after relaunch. You can still start a manual session yourself.
+- An existing manual session takes priority: the scheduled window is skipped and does not change or stop it. Automatic stop applies to the session started by the schedule.
+- Stop an active session before editing the schedule. Draft changes take effect only when saved. Disabling the schedule cancels future automatic starts.
+- Times follow the Mac's local calendar. Missing daylight-saving times use the next valid time; repeated times use the first occurrence. An already-started session retains its original absolute end time.
 
 ### Two operating modes
 
@@ -138,7 +150,7 @@ The DMG and SHA-256 file are written to `dist/`. Packaging uses a separate stagi
 swift test
 ```
 
-There are currently 17 policy and controller-state tests covering deadlines, power conditions, low battery, thermal pressure, lost connections, sleep handling, and startup failures.
+There are currently 36 policy, scheduling, and controller-state tests covering deadlines, power conditions, low battery, thermal pressure, lost connections, sleep handling, startup failures, overnight schedules, daylight-saving transitions, wake catch-up, and duplicate-start prevention.
 
 The following integration checks briefly acquire real power assertions. Stop any MacBeat session and keep the lid open before running them:
 

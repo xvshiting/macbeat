@@ -10,7 +10,7 @@ import SwiftUI
     private var iconState: StatusItemIcon.State?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
-        let preview = CommandLine.arguments.contains("--preview")
+        let preview = CommandLine.arguments.contains("--preview") || Bundle.main.bundleIdentifier == "dev.macbeat.preview"
         model = SessionController(preview: preview)
         item = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
         item.button?.target = self; item.button?.action = #selector(togglePopover)
@@ -70,6 +70,7 @@ import SwiftUI
         if model.preview { return .terminateNow }
         guard model.active || model.phase == "error" else { return .terminateNow }
         quitting = true
+        model.schedulingPaused = true
         model.stop()
         return .terminateLater
     }
