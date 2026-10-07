@@ -10,7 +10,7 @@ import SwiftUI
     private var iconState: StatusItemIcon.State?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
-        let preview = CommandLine.arguments.contains("--preview") || Bundle.main.bundleIdentifier == "dev.macbeat.preview"
+        let preview = CommandLine.arguments.contains("--preview") || Bundle.main.bundleIdentifier?.hasPrefix("dev.macbeat.preview") == true
         model = SessionController(preview: preview)
         item = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
         item.button?.target = self; item.button?.action = #selector(togglePopover)

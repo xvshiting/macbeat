@@ -6,6 +6,7 @@ struct PopoverView: View {
     @ObservedObject var model: SessionController
     @State private var page: Page = CommandLine.arguments.contains("--preview-plan") ? .plan : .session
     @State private var dateOpen = false
+    @State private var endEditorOpen = false
     private enum Page { case session, plan, health }
     private var contentHeight: CGFloat {
         let desired: CGFloat = model.showSettings ? 570 : page == .plan ? 610 : page == .health ? 510 : 535
@@ -16,7 +17,7 @@ struct PopoverView: View {
             header
             if !model.showSettings {
                 HStack(spacing: 3) {
-                    tab("保持运行", .session); tab("每日计划", .plan)
+                    tab("保持运行", .session); tab("每日计划", .plan); tab("系统状态", .health)
                 }.padding(3).background(BeatStyle.line.opacity(0.6), in: RoundedRectangle(cornerRadius: 10)).padding(.horizontal, 20)
             }
             ScrollView {
@@ -32,7 +33,20 @@ struct PopoverView: View {
             .background(LinearGradient(colors: [Color(red: 0.98, green: 0.99, blue: 1), Color(red: 0.95, green: 0.97, blue: 0.99)], startPoint: .topLeading, endPoint: .bottomTrailing))
             .preferredColorScheme(.light).environment(\.locale, Locale(identifier: "zh_CN"))
             .onChange(of: page) { if $0 == .health { model.inspect() } }
+            .onChange(of: model.running) { running in
+                if running { page = .session; model.showSettings = false }
+                else { endEditorOpen = false }
+            }
             .sheet(item: $model.recoveryConfirmation) { action in recoveryDialog(action) }
+            .sheet(isPresented: $endEditorOpen) {
+                VStack(spacing: 16) {
+                    HStack { Text("调整结束时间").font(.system(size: 17, weight: .semibold)); Spacer(); Button("取消") { endEditorOpen = false }.buttonStyle(.plain) }
+                    endEditor
+                    BeatPrimary(title: "更新结束时间", disabled: model.validation != nil || model.busy) {
+                        model.update(); endEditorOpen = false
+                    }
+                }.padding(20).frame(width: 314).background(BeatStyle.surface)
+            }
     }
     private var header: some View {
         HStack(spacing: 7) {
@@ -51,11 +65,58 @@ struct PopoverView: View {
     }
     private var session: some View {
         VStack(spacing: 16) {
-            if model.scheduledSession && model.active {
-                Label("每日计划运行中", systemImage: "calendar.badge.clock").font(.system(size: 14, weight: .medium)).foregroundStyle(BeatStyle.blue)
-                Text(model.end?.formatted(.dateTime.hour().minute()) ?? "").font(.system(size: 40, weight: .medium, design: .rounded))
-                Text("结束时间").font(.system(size: 10)).foregroundStyle(BeatStyle.muted)
+            if model.running || model.phase == "stopping" || model.keepAwake.agentActive {
+                runningCard
+                if model.running && !model.scheduledSession {
+                    Button("调整结束时间") {
+                        if let applied = model.appliedPlan {
+                            model.mode = applied.mode; model.duration = applied.duration; model.deadline = applied.deadline
+                        }
+                        endEditorOpen = true
+                    }.buttonStyle(.plain).font(.system(size: 11)).foregroundStyle(BeatStyle.blue).disabled(model.busy)
+                }
             } else {
+                endEditor
+            }
+            Divider().overlay(BeatStyle.line)
+            VStack(spacing: 13) {
+                detail("laptopcomputer", "合盖保持运行", model.clamshellStatus)
+                detail("powerplug", "电源状态", model.powerText)
+            }
+            BeatPrimary(title: model.busy ? "请稍候…" : model.running ? "停止保持运行" : model.needsRecovery ? "查看恢复状态" : "开启保持运行", disabled: model.busy || (!model.running && !model.needsRecovery && model.validation != nil)) {
+                if model.running { model.stop() }
+                else if model.needsRecovery { page = .health; model.inspect() }
+                else { model.start() }
+            }
+            if !model.message.isEmpty { Text(model.message).font(.system(size: 10)).foregroundStyle(model.startFailed || model.phase == "error" ? Color.orange : BeatStyle.muted).fixedSize(horizontal: false, vertical: true) }
+            if model.preview { Text("界面预览 · 不改变系统状态").font(.system(size: 9)).foregroundStyle(BeatStyle.muted) }
+        }
+    }
+    private var runningCard: some View {
+        VStack(spacing: 18) {
+            ZStack {
+                Circle().fill(Color.green.opacity(0.05)).frame(width: 112, height: 112)
+                Circle().fill(Color.green.opacity(0.09)).frame(width: 84, height: 84)
+                Image(systemName: "waveform.path.ecg").font(.system(size: 38, weight: .light)).foregroundStyle(.green)
+            }.accessibilityHidden(true)
+            VStack(spacing: 8) {
+                Text(model.phase == "stopping" ? "正在结束保持" : model.running ? model.title : "发现已有保持运行").font(.system(size: 22, weight: .semibold))
+                Text(model.scheduledSession ? "每日计划" : model.running ? "本次保持" : "MacBeat 控制会话").font(.system(size: 10)).foregroundStyle(BeatStyle.muted)
+            }
+            if model.running || model.phase == "stopping" {
+                if let end = model.end {
+                    Text(end.formatted(.dateTime.hour().minute())).font(.system(size: 37, weight: .medium, design: .rounded)).monospacedDigit()
+                    Text("\(end.formatted(.dateTime.month().day()))结束 · \(model.remaining)").font(.system(size: 10)).foregroundStyle(BeatStyle.muted)
+                } else {
+                    Label("直到手动停止", systemImage: "infinity").font(.system(size: 13)).foregroundStyle(BeatStyle.muted)
+                }
+            } else {
+                Text("可在系统状态中手动结束。").font(.system(size: 11)).foregroundStyle(BeatStyle.muted)
+            }
+        }.frame(maxWidth: .infinity, minHeight: 300).beatCard()
+    }
+    private var endEditor: some View {
+        VStack(spacing: 16) {
                 HStack(spacing: 20) {
                     ForEach(EndMode.allCases, id: \.self) { mode in
                         Button { model.mode = mode } label: {
@@ -74,23 +135,6 @@ struct PopoverView: View {
                     }
                 }.disabled(model.busy)
                 if let validation = model.validation { Text(validation).font(.system(size: 10)).foregroundStyle(.orange) }
-                if model.running && model.changed {
-                    Button("更新结束时间") { model.update() }.buttonStyle(.bordered).tint(BeatStyle.blue).disabled(model.validation != nil || model.busy)
-                }
-            }
-            Divider().overlay(BeatStyle.line)
-            VStack(spacing: 13) {
-                detail("laptopcomputer", "合盖保持运行", model.clamshellStatus)
-                detail("powerplug", "电源状态", model.powerText)
-            }
-            BeatPrimary(title: model.busy ? "请稍候…" : model.running ? "停止保持运行" : model.needsRecovery ? "查看恢复状态" : "开启保持运行", disabled: model.busy || (!model.running && !model.needsRecovery && model.validation != nil)) {
-                if model.running { model.stop() }
-                else if model.needsRecovery { page = .health; model.inspect() }
-                else { model.start() }
-            }
-            if model.running { Text(model.remaining).font(.system(size: 10, design: .monospaced)).foregroundStyle(BeatStyle.muted) }
-            if !model.message.isEmpty { Text(model.message).font(.system(size: 10)).foregroundStyle(model.startFailed || model.phase == "error" ? Color.orange : BeatStyle.muted).fixedSize(horizontal: false, vertical: true) }
-            if model.preview { Text("界面预览 · 不改变系统状态").font(.system(size: 9)).foregroundStyle(BeatStyle.muted) }
         }
     }
     private var deadlineMinutes: Binding<Int> {
@@ -151,14 +195,20 @@ struct PopoverView: View {
                 Button { model.showSettings.toggle() } label: { Image(systemName: model.showSettings ? "chevron.left" : "gearshape") }.buttonStyle(.plain).accessibilityLabel(model.showSettings ? "返回" : "设置")
                 Text(model.powerOnly ? "仅接通电源时运行" : "允许使用电池运行").font(.system(size: 9))
                 Spacer(minLength: 4)
-                Button { model.showSettings = false; page = .health; model.inspect() } label: { Label(model.needsRecovery ? "有待恢复的保持" : "查看保持状态", systemImage: "checkmark.shield") }.buttonStyle(.plain).font(.system(size: 9))
+                Button { model.showSettings = false; page = .health; model.inspect() } label: { Label(model.needsRecovery ? "有待恢复的保持" : "系统状态", systemImage: "checkmark.shield") }.buttonStyle(.plain).font(.system(size: 9))
             }.foregroundStyle(BeatStyle.muted).padding(.horizontal, 20).padding(.vertical, 13)
         }
     }
     private var health: some View {
         VStack(alignment: .leading, spacing: 15) {
-            HStack { Text("保持状态，一目了然。").font(.system(size: 19, weight: .semibold)); Spacer(); Button { model.inspect() } label: { Image(systemName: "arrow.clockwise") }.buttonStyle(.plain).accessibilityLabel("重新检测") }
+            HStack { Text("系统状态").font(.system(size: 19, weight: .semibold)); Spacer(); Button { model.inspect() } label: { Image(systemName: "arrow.clockwise") }.buttonStyle(.plain).accessibilityLabel("重新检测") }
             Text("检查当前系统状态，处理未结束的保持。").font(.system(size: 10)).foregroundStyle(BeatStyle.muted)
+            VStack(spacing: 14) {
+                detail("powerplug", "电源状态", model.powerText)
+                detail("laptopcomputer", "屏幕盖", model.power?.lidClosed.map { $0 ? "已合盖" : "已开盖" } ?? "读取中")
+                detail("thermometer.medium", "温度压力", model.power.map { ["正常", "轻度", "较高", "严重"][max(0, min(3, $0.thermal))] } ?? "读取中")
+                detail("moon", "全局禁用睡眠", model.keepAwake.globalSleepDisabled.map { $0 ? "已开启" : "未开启" } ?? "未知")
+            }.beatCard()
             VStack(alignment: .leading, spacing: 10) {
                 Image(systemName: model.needsRecovery ? "arrow.counterclockwise" : model.running ? "waveform.path.ecg" : "checkmark.shield").foregroundStyle(model.needsRecovery ? Color.orange : BeatStyle.blue)
                 Text(model.running ? "MacBeat 正在运行" : model.keepAwake.agentActive ? "发现 MacBeat 控制会话" : model.keepAwake.recoveryRecord ? "发现 MacBeat 恢复记录" : "MacBeat 状态正常").font(.system(size: 13, weight: .semibold))
