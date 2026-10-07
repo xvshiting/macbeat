@@ -1,4 +1,4 @@
-MacBeat 0.1.3 — native local build
+MacBeat 0.3.0 — native local build
 
 BUILD / RUN
   bash scripts/build.sh
@@ -51,7 +51,7 @@ RECOVERY
   session resets its sleep observation baseline and emits a wake notice.
   Before the private clamshell call a user-local recovery journal is written.
   A second process waits for agent exit and handles leftover recovery.
-  Startup also handles recovery journals. Restore errors are visible and
+  Application startup inspects recovery journals without stopping another live owner. Restore errors are visible and
   retried, never announced as successful cleanup.
   Killing both control and recovery processes, OS bugs, powerd races, or
   power loss cannot be given an absolute cleanup guarantee.
@@ -110,3 +110,18 @@ v0.2.0 每日定时（2026-10-07）
 - 退出时暂停调度，避免退出清理期间启动新会话。
 - 预览使用隔离偏好，不写入用户设置。dev.macbeat.preview 包 ID 支持无系统副作用的原生界面验收。
 - 36 项单元测试；未新增物理合盖测试，原电源保持实现未改变。
+
+
+v0.3.0 原生界面与多时段（2026-10-08）
+- 已确认原型保留在 codex/macbeat-ui-exploration，最终原型提交 1519e6e。
+- 原生实现位于 codex/macbeat-native-redesign，不直接发布原型 HTML。
+- 时长圆盘固定 24 小时；分钟精确输入。每日弧段可新增、调整两端与整段平移。
+- DailyPeriod 使用稳定 UUID，00:00–24:00 的当天分钟数，独立启用状态。
+- 旧跨午夜窗口自动拆分；保留已消费旧时段的停止记录，避免迁移后意外重启。
+- 合并前计算传递重叠集合，确认才修改草稿；保存才作用于调度器。
+- 相邻同日窗口合为连续执行窗口，午夜交接等待旧 agent 退出后再开启下一段。
+- agent-session.json / stop-request.json 使用随机会话令牌；请求结束由持有锁的 agent 自行处理。
+- 不向未知 PID 发送信号。旧版本缺少会话标识时提示回原应用结束或等待超时。
+- --inspect 只读返回 MacBeat 日志、控制锁和系统合盖聚合状态，不能据此断言共享位所有者。
+- --stop-existing 协作结束所属会话，--release-shared 为用户确认后的显式共享位解除。
+- 未新增物理合盖验证；2026-10-08 本机全局 SleepDisabled 为 true，未擅自修改。

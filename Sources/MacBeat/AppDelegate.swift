@@ -54,7 +54,7 @@ import SwiftUI
     @objc func quit() { NSApplication.shared.terminate(nil) }
     func updateStatus() {
         item.button?.toolTip = model.running ? "MacBeat · \(model.remaining)" : "MacBeat · \(model.statusText)"
-        let state: StatusItemIcon.State = model.running ? .running : (model.startFailed || model.phase == "error" || model.phase == "recovering") ? .attention : .idle
+        let state: StatusItemIcon.State = model.running ? .running : (model.startFailed || model.needsRecovery || model.phase == "recovering") ? .attention : .idle
         if iconState != state {
             item.button?.image = StatusItemIcon.make(state)
             iconState = state

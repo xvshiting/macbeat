@@ -29,12 +29,13 @@ Keep downloads, computations, and local services running while you step away. St
 | --- | --- |
 | Keep awake with the lid open | Prevents automatic idle sleep |
 | Optional closed-lid operation | Requests continued operation when you close your MacBook |
-| Duration | Run for 30 minutes, 1 hour, or 2 hours |
+| Duration | A 24-hour dial, exact hour/minute entry, and one-minute adjustment |
 | Exact end time | Choose a local date and time, including the next day |
 | Manual stop | Continue until you stop the session or a protection condition is reached |
 | Adjust an active session | Changes take effect only after you apply the updated end time |
 | Battery and thermal protection | Optional AC-only operation, low-battery threshold, and stopping under elevated thermal pressure |
-| Daily schedule | Automatically starts and stops every day at local times, including overnight windows |
+| Daily schedule | Multiple same-day windows on a 24-hour dial, with drag editing and overlap merging |
+| Recovery controls | Detect MacBeat sessions and recovery records; explicitly request shared-state release |
 | Launch at login | Starts in standby, or checks the current window if you enabled a daily schedule |
 
 The menu bar icon uses a white heartbeat on a colored background: **blue** for standby, **green** for an active session, and **amber** when attention is needed. It stays visible on light and dark menu bars.
@@ -42,6 +43,8 @@ The menu bar icon uses a white heartbeat on a colored background: **blue** for s
 <p align="center"><img src="docs/images/menu-bar-icons.png" width="600" alt="Blue standby, green active, and amber attention icons on light and dark backgrounds; labels in Chinese"></p>
 
 ## Download and install
+
+This branch contains the upcoming 0.3.0 interface and scheduling changes described above. The published download below is still 0.2.0; build from source to try the new features.
 
 1. Download `MacBeat-0.2.0-arm64.dmg` from [Releases](https://github.com/xvshiting/macbeat/releases/tag/v0.2.0).
 2. Open the DMG and **drag MacBeat.app into Applications**.
@@ -73,7 +76,9 @@ To update, stop your session and quit the old version before replacing the app. 
 
 ### Daily automatic start and stop
 
-In **Settings → Daily schedule** (设置 → 每日定时), turn the option on, choose the start and end times, and click **Save daily schedule** (保存每日定时). It is disabled by default. For example, 09:00–18:00 runs each day during work hours; 22:00–02:00 ends the following morning. Equal start and end times are rejected.
+Open the **Daily plan** (每日计划) tab. Drag a blank arc to add a window; drag its endpoints to resize it or its middle to move it. Click a window to enter precise start and end times. Overlapping windows show a merge preview before changing the plan. Each window can be disabled or deleted independently. Click **Save daily plan** (保存每日计划) to apply the draft.
+
+Times stay within **00:00–24:00**. For overnight work, use two windows, such as 22:00–24:00 and 00:00–02:00. Existing single-window settings are migrated automatically, including overnight settings. The plan is disabled by default.
 
 - MacBeat must be running. Enable **Launch at login** if you want the schedule available after signing in. This feature does not wake a sleeping Mac or power on a shut-down Mac.
 - Saving a schedule, launching the app, or waking during an unhandled window starts a session until that window's original end. A fully missed window is skipped.
@@ -123,6 +128,8 @@ MacBeat **does not run `pmset disablesleep` or write persistent power settings**
 
 Sessions end on their deadline, manual stop, a lost client connection, low battery, elevated thermal pressure, or a violation of the selected power policy. A separate recovery process and a local journal help restore state if the control process exits unexpectedly. Recovery failures appear in the interface and are retried.
 
+The **Keep-awake status** view distinguishes a MacBeat control session or recovery record from the system's aggregate closed-lid policy. Opening this view only inspects state. **End leftover session** asks an identified MacBeat agent to stop and then processes its recovery record. **Release shared keep-awake** requires an explicit confirmation because the state may be shared with other utilities. It does not alter the global sleep-disabled preference or guarantee that all other sleep blockers disappear.
+
 The private closed-lid interface changes shared system state rather than a strictly process-owned resource. Recovery cannot be guaranteed when multiple utilities control that state, or when both recovery-related processes are forcibly killed. Reopen MacBeat if it reports a recovery issue. See [IMPLEMENTATION.txt](IMPLEMENTATION.txt) for details (in Chinese).
 
 ## Build from source
@@ -147,10 +154,10 @@ The DMG and SHA-256 file are written to `dist/`. Packaging uses a separate stagi
 ### Tests
 
 ```sh
-swift test
+conda run -n kora swift test
 ```
 
-There are currently 36 policy, scheduling, and controller-state tests covering deadlines, power conditions, low battery, thermal pressure, lost connections, sleep handling, startup failures, overnight schedules, daylight-saving transitions, wake catch-up, and duplicate-start prevention.
+There are 51 policy, scheduling, controller, and recovery-store tests, including legacy migration, multiple daily windows, midnight handoff, overlap merging, arc movement, daylight-saving transitions, stop suppression, lock ownership, and token-matched cooperative stop requests.
 
 The following integration checks briefly acquire real power assertions. Stop any MacBeat session and keep the lid open before running them:
 

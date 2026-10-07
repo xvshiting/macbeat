@@ -13,6 +13,7 @@ let package = Package(
         .executableTarget(name: "MacBeat", dependencies: ["MacBeatCore"]),
         .executableTarget(name: "MacBeatAgent", dependencies: ["MacBeatCore"]),
         .testTarget(name: "MacBeatCoreTests", dependencies: ["MacBeatCore"]),
-        .testTarget(name: "MacBeatTests", dependencies: ["MacBeat", "MacBeatCore"])
+        .testTarget(name: "MacBeatTests", dependencies: ["MacBeat", "MacBeatCore"]),
+        .testTarget(name: "MacBeatAgentTests", dependencies: ["MacBeatAgent"])
     ]
 )

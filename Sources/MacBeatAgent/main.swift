@@ -79,13 +79,32 @@ if CommandLine.arguments.contains("--watch") {
 }
 
 if CommandLine.arguments.contains("--inspect") {
-    emit(AgentEvent("snapshot", power: powerSnapshot()))
+    emit(AgentEvent("snapshot", power: powerSnapshot(), keepAwake: keepAwakeSnapshot()))
     exit(0)
 }
 
+if CommandLine.arguments.contains("--release-shared") {
+    do {
+        try engine.releaseShared()
+        emit(AgentEvent("recovered", message: "已请求解除共享合盖保持。", power: powerSnapshot()))
+        exit(0)
+    } catch { emit(AgentEvent("error", message: error.localizedDescription)); exit(1) }
+}
+if CommandLine.arguments.contains("--stop-existing") {
+    do { try engine.recovery.requestStop() }
+    catch { emit(AgentEvent("error", message: error.localizedDescription)); exit(1) }
+}
+
 do {
-    try engine.recoverExisting()
-    if CommandLine.arguments.contains("--recover") {
+    // The exiting owner's watcher can briefly hold the recovery lock.
+    var lastError: Error?
+    let attempts = CommandLine.arguments.contains("--stop-existing") ? 20 : 1
+    for attempt in 0..<attempts {
+        do { try engine.recoverExisting(); lastError = nil; break }
+        catch { lastError = error; if attempt + 1 < attempts { Thread.sleep(forTimeInterval: 0.1) } }
+    }
+    if let lastError { throw lastError }
+    if CommandLine.arguments.contains("--recover") || CommandLine.arguments.contains("--stop-existing") {
         emit(AgentEvent("recovered", message: "恢复记录已处理。", power: powerSnapshot()))
         exit(0)
     }
@@ -93,6 +112,9 @@ do {
     emit(AgentEvent("error", message: error.localizedDescription))
     exit(1)
 }
+
+do { try engine.recovery.registerAgent() }
+catch { emit(AgentEvent("error", message: "无法记录控制会话：" + error.localizedDescription)); exit(1) }
 
 // Start the crash restorer before accepting commands. No power state is changed here.
 let monitor = Process()
@@ -133,6 +155,7 @@ let timer = DispatchSource.makeTimerSource(queue: .main)
 timer.schedule(deadline: .now() + 1, repeating: 1)
 timer.setEventHandler {
     if shuttingDown { finish(pendingStop); return }
+    if engine.recovery.stopRequested { finish(.requested); return }
     let age = ProcessInfo.processInfo.systemUptime - lastHeartbeat
     guard let plan else { if age >= 10 { finish(.clientLost) }; return }
     let power = powerSnapshot()

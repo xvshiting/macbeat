@@ -98,6 +98,17 @@ final class PowerControl {
         if let error = stop() { throw PowerError(message: error) }
     }
 
+    func releaseShared() throws {
+        try recovery.lock()
+        let service = IOServiceGetMatchingService(kIOMainPortDefault, IOServiceMatching("IOPMrootDomain"))
+        guard service != 0 else { throw PowerError(message: "无法访问合盖控制接口。") }
+        let result = IOServiceOpen(service, mach_task_self_, 0, &connection)
+        IOObjectRelease(service)
+        guard result == kIOReturnSuccess else { throw failure("打开合盖控制接口", result) }
+        defer { IOServiceClose(connection); connection = 0 }
+        try setClamshell(false)
+        try recovery.disarm()
+    }
     private func assertion(_ type: String, required: Bool) throws {
         var id: IOPMAssertionID = 0
         let result = IOPMAssertionCreateWithName(type as CFString, IOPMAssertionLevel(kIOPMAssertionLevelOn),
@@ -133,4 +144,11 @@ final class PowerControl {
     private func failure(_ operation: String, _ code: IOReturn) -> PowerError {
         PowerError(message: "\(operation)失败（0x\(String(UInt32(bitPattern: code), radix: 16))）。系统可能不支持此接口。")
     }
+}
+
+func keepAwakeSnapshot() -> KeepAwakeStatus {
+    let store = RecoveryStore()
+    return KeepAwakeStatus(recoveryRecord: store.isArmed, agentActive: store.agentActive,
+        clamshellBlocked: (rootProperty("AppleClamshellCausesSleep") as? Bool).map { !$0 },
+        globalSleepDisabled: rootProperty("SleepDisabled") as? Bool)
 }

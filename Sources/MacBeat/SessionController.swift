@@ -25,6 +25,10 @@ import MacBeatCore
     @Published var closedSeconds = 0
     @Published var requestedClamshell = false
     @Published var showSettings = false
+    @Published var keepAwake = KeepAwakeStatus()
+    @Published var recoveryNotice = ""
+    @Published var recoveryConfirmation: RecoveryAction?
+    enum RecoveryAction: String, Identifiable { case owned, shared; var id: String { rawValue } }
     @Published var now = Date()
     @Published var loginEnabled = SMAppService.mainApp.status == .enabled
     @Published var loginNotice = ""
@@ -46,7 +50,7 @@ import MacBeatCore
 
     var running: Bool { phase == "running" }
     var startFailed: Bool { phase == "startFailed" }
-    var statusText: String { running ? "运行中" : busy ? "处理中" : startFailed ? "开启失败" : phase == "error" ? "需要恢复" : "未开启" }
+    var statusText: String { running ? "运行中" : busy ? "处理中" : startFailed ? "开启失败" : needsRecovery ? "需要恢复" : "未开启" }
     var busy: Bool { phase == "starting" || phase == "stopping" || phase == "recovering" || updating }
     var active: Bool { running || busy }
     var plan: SessionPlan {
@@ -98,10 +102,20 @@ import MacBeatCore
         powerOnly = settings.object(forKey: "powerOnly") as? Bool ?? true
         batteryThreshold = settings.object(forKey: "batteryThreshold") as? Int ?? 20
         clamshell = settings.object(forKey: "clamshell") as? Bool ?? true
-        let schedule = settings.data(forKey: "dailySchedule").flatMap { try? JSONDecoder().decode(DailySchedule.self, from: $0) } ?? DailySchedule()
+        let originalScheduleData = settings.data(forKey: "dailySchedule")
+        let schedule = originalScheduleData.flatMap { try? JSONDecoder().decode(DailySchedule.self, from: $0) } ?? DailySchedule()
         dailySchedule = schedule
         savedDailySchedule = schedule
+        if (!preview || defaults != nil), settings.data(forKey: "dailySchedule") != nil,
+           let migrated = try? JSONEncoder().encode(schedule) { settings.set(migrated, forKey: "dailySchedule") }
         lastScheduledStart = settings.object(forKey: "lastScheduledStart") as? Date
+        if let data = originalScheduleData, let legacy = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+           legacy["periods"] == nil, let start = legacy["startMinute"] as? Int, let end = legacy["endMinute"] as? Int,
+           end > 0, end < start, let consumed = lastScheduledStart,
+           let midnight = Calendar.current.date(byAdding: .day, value: 1, to: Calendar.current.startOfDay(for: consumed)) {
+            lastScheduledStart = midnight
+            if persistSettings { settings.set(midnight, forKey: "lastScheduledStart") }
+        }
         if preview { power = PowerSnapshot(onAC: true, battery: 86, lidClosed: false, thermal: 0) }
         if automaticTicks {
             timer = Timer(timeInterval: 1, repeats: true) { [weak self] _ in
@@ -109,11 +123,9 @@ import MacBeatCore
             }
             if let timer { RunLoop.main.add(timer, forMode: .common) }
         }
-        if !preview {
-            let journal = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Library/Application Support/MacBeat/clamshell-recovery.json")
-            if FileManager.default.fileExists(atPath: journal.path) { recover() }
-            else { inspect() }
-        }
+        // Inspection is read-only. Another live owner must only be stopped by
+        // the user's explicit recovery action, never by opening this app.
+        if !preview { inspect() }
     }
     func tick(at date: Date = Date()) {
         now = date
@@ -130,7 +142,7 @@ import MacBeatCore
         startSession(plan, scheduled: false)
     }
     private func startSession(_ sessionPlan: SessionPlan, scheduled: Bool) {
-        guard !active, phase != "error", process == nil else { return }
+        guard !active, !needsRecovery, process == nil else { return }
         do { _ = try sessionPlan.endDate(now: now) }
         catch { message = error.localizedDescription; return }
         saveSettings()
@@ -160,6 +172,7 @@ import MacBeatCore
                     guard let self, self.process === task else { return }
                     self.input = nil; self.output = nil; self.process = nil
                     self.releaseActivity()
+                    if self.receivedStop { self.inspect() }
                     if !self.receivedStop {
                         self.phase = "error"
                         self.message = "控制进程退出（\(task.terminationStatus)）；恢复监视进程会处理遗留状态，可点击恢复状态确认。"
@@ -192,13 +205,21 @@ import MacBeatCore
         guard process?.isRunning == true else { recover(); return }
         phase = "stopping"; send(AgentCommand("stop"))
     }
-    func recover() {
-        guard process == nil else { stop(); return }
+    func recover() { restore(.owned) }
+    func restore(_ action: RecoveryAction) {
+        guard !busy else { return }
+        if running || process != nil { stop(); return }
+        suppressCurrentSchedule()
+        if preview {
+            if action == .owned { keepAwake.recoveryRecord = false; keepAwake.agentActive = false }
+            keepAwake.clamshellBlocked = false; phase = "idle"
+            recoveryNotice = "界面预览，未更改系统状态。"; return
+        }
         phase = "recovering"
-        runOneShot(arguments: ["--recover"]) { [weak self] events, code in
+        runOneShot(arguments: [action == .owned ? "--stop-existing" : "--release-shared"]) { [weak self] events, code in
             guard let self else { return }
             if code == 0, events.contains(where: { $0.kind == "recovered" }) {
-                self.phase = "idle"; self.message = "MacBeat 的恢复记录已处理。"; self.safeToQuit?()
+                self.phase = "idle"; self.recoveryNotice = action == .owned ? "MacBeat 会话与恢复记录已处理。" : "已请求解除共享保持；其他应用和系统设置仍可能影响休眠。"; self.message = ""; self.inspect(); self.safeToQuit?()
             } else { self.phase = "error"; self.message = events.last?.message ?? "恢复失败，请重新打开应用后重试。" }
         }
     }
@@ -232,6 +253,7 @@ import MacBeatCore
                 message = event.message; updating = false; pendingPlan = nil
             case "recoveryError": phase = "recovering"; message = event.message
             case "stopped":
+                if event.message == StopReason.requested.rawValue { suppressCurrentSchedule() }
                 if scheduledSession && !startFailed { scheduleNotice = "本次定时已结束：\(event.message)。" }
                 receivedStop = true
                 if !startFailed { phase = "idle" }
@@ -244,10 +266,17 @@ import MacBeatCore
         }
     }
     func inspect() {
+        guard !preview else { return }
         guard !inspectInProgress else { return }; inspectInProgress = true
         runOneShot(arguments: ["--inspect"]) { [weak self] events, _ in
             self?.inspectInProgress = false
             if let snapshot = events.first?.power { self?.power = snapshot }
+            if let self, let state = events.first?.keepAwake {
+                self.keepAwake = state
+                if !self.active && (state.recoveryRecord || state.agentActive) {
+                    self.recoveryNotice = "检测到已有 MacBeat 保持状态，可手动结束并恢复。"
+                }
+            }
         }
     }
     private func runOneShot(arguments: [String], completion: @escaping ([AgentEvent], Int32) -> Void) {
@@ -271,16 +300,15 @@ import MacBeatCore
         defaults.set(clamshell, forKey: "clamshell")
     }
     var scheduleValidation: String? {
-        dailySchedule.enabled && !dailySchedule.isValid ? "开启与关闭时间不能相同，且必须是有效时间。" : nil
+        !dailySchedule.isValid ? "请使用当天 00:00–24:00 的有效时段，并合并重叠时段。" : nil
     }
     var scheduleChanged: Bool { dailySchedule != savedDailySchedule }
     var scheduleSummary: String {
         guard savedDailySchedule.enabled else { return "每日定时未开启" }
         guard savedDailySchedule.isValid else { return "每日定时无效，请重新设置" }
-        let start = Self.clockText(savedDailySchedule.startMinute)
-        let end = Self.clockText(savedDailySchedule.endMinute)
-        return "每天 \(start) — \(savedDailySchedule.crossesMidnight ? "次日 " : "")\(end)"
+        return "每日计划 · \(savedDailySchedule.periods.filter(\.enabled).count) 个时段"
     }
+
     private static func clockText(_ minute: Int) -> String {
         String(format: "%02d:%02d", minute / 60, minute % 60)
     }
@@ -304,6 +332,9 @@ import MacBeatCore
         evaluateDailySchedule(at: date, calendar: calendar)
     }
     func evaluateDailySchedule(at date: Date, calendar: Calendar = .current) {
+        // A scheduled session may be handing off at midnight or a boundary.
+        // Do not consume the next window while the old agent is stopping.
+        if scheduledSession && active, let end, date >= end { return }
         guard !schedulingPaused,
               let window = savedDailySchedule.currentWindow(at: date, calendar: calendar),
               lastScheduledStart.map({ $0 < window.start }) ?? true else { return }
@@ -311,7 +342,7 @@ import MacBeatCore
         // restart this window or bypass battery/thermal protections.
         lastScheduledStart = window.start
         if persistSettings { defaults.set(window.start, forKey: "lastScheduledStart") }
-        guard !active, process == nil, phase != "error" else {
+        guard !active, process == nil, !needsRecovery else {
             scheduleNotice = "本次定时已跳过：已有会话运行或状态尚未恢复。"
             return
         }
@@ -330,6 +361,13 @@ import MacBeatCore
         startSession(scheduledPlan, scheduled: true)
         if running { scheduleNotice = "已按每日定时开启。" }
         else if startFailed { scheduleNotice = "本次定时开启失败，下一时段再尝试。" }
+    }
+    var needsRecovery: Bool { !active && (keepAwake.recoveryRecord || keepAwake.agentActive || phase == "error") }
+    private func suppressCurrentSchedule() {
+        if let window = savedDailySchedule.currentWindow(at: now) {
+            lastScheduledStart = max(lastScheduledStart ?? .distantPast, window.start)
+            if persistSettings { defaults.set(lastScheduledStart, forKey: "lastScheduledStart") }
+        }
     }
     func setLogin(_ enabled: Bool) {
         if preview { loginEnabled = enabled; return }

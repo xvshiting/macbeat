@@ -20,10 +20,10 @@ final class DailyScheduleTests: XCTestCase {
         XCTAssertNil(DailySchedule().currentWindow(at: start, calendar: calendar()))
         XCTAssertNil(DailySchedule().nextWindow(after: start, calendar: calendar()))
     }
-    func testOvernightWindowBelongsToPreviousDayAcrossYearBoundary() {
+    func testLegacyOvernightMigratesToTwoSameDayWindows() {
         let schedule = DailySchedule(enabled: true, startMinute: 22 * 60, endMinute: 2 * 60)
         let window = schedule.currentWindow(at: date("2027-01-01T01:30:00+08:00"), calendar: calendar())
-        XCTAssertEqual(window?.start, date("2026-12-31T22:00:00+08:00"))
+        XCTAssertEqual(window?.start, date("2027-01-01T00:00:00+08:00"))
         XCTAssertEqual(window?.end, date("2027-01-01T02:00:00+08:00"))
     }
     func testWakeAfterEntireWindowDoesNotCatchUp() {
@@ -35,7 +35,7 @@ final class DailyScheduleTests: XCTestCase {
     func testEqualTimesAndInvalidPersistedMinutesAreRejected() {
         for schedule in [DailySchedule(enabled: true, startMinute: 540, endMinute: 540),
                          DailySchedule(enabled: true, startMinute: -1),
-                         DailySchedule(enabled: true, endMinute: 1440)] {
+                         DailySchedule(enabled: true, endMinute: 1441)] {
             XCTAssertFalse(schedule.isValid)
             XCTAssertNil(schedule.currentWindow(at: Date(), calendar: calendar()))
             XCTAssertNil(schedule.nextWindow(after: Date(), calendar: calendar()))
@@ -44,9 +44,9 @@ final class DailyScheduleTests: XCTestCase {
     func testSpringForwardUsesLocalCalendarRatherThan24Hours() {
         let schedule = DailySchedule(enabled: true, startMinute: 22 * 60, endMinute: 4 * 60)
         let window = schedule.currentWindow(at: date("2026-03-08T03:30:00-07:00"), calendar: calendar("America/Los_Angeles"))
-        XCTAssertEqual(window?.start, date("2026-03-07T22:00:00-08:00"))
+        XCTAssertEqual(window?.start, date("2026-03-08T00:00:00-08:00"))
         XCTAssertEqual(window?.end, date("2026-03-08T04:00:00-07:00"))
-        XCTAssertEqual(window?.end.timeIntervalSince(window!.start), 5 * 3600)
+        XCTAssertEqual(window?.end.timeIntervalSince(window!.start), 3 * 3600)
     }
     func testMissingStartTimeUsesNextValidTime() {
         let schedule = DailySchedule(enabled: true, startMinute: 150, endMinute: 240)

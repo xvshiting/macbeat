@@ -125,3 +125,59 @@ final class DailyScheduleControllerTests: XCTestCase {
         XCTAssertFalse(model.running)
     }
 }
+
+extension DailyScheduleControllerTests {
+    @MainActor func testManualStopOnlySkipsThisWindowAndSecondWindowStillRuns() {
+        let m = SessionController(preview: true, automaticTicks: false)
+        m.dailySchedule = DailySchedule(enabled: true, periods: [DailyPeriod(startMinute: 540, endMinute: 720), DailyPeriod(startMinute: 840, endMinute: 1080)])
+        m.saveDailySchedule(at: date("2026-10-08T09:00:00+08:00"), calendar: calendar)
+        m.stop()
+        m.evaluateDailySchedule(at: date("2026-10-08T10:00:00+08:00"), calendar: calendar)
+        XCTAssertFalse(m.running)
+        m.evaluateDailySchedule(at: date("2026-10-08T14:00:00+08:00"), calendar: calendar)
+        XCTAssertTrue(m.running)
+        XCTAssertEqual(m.end, date("2026-10-08T18:00:00+08:00"))
+    }
+    @MainActor func testMidnightHandoffWaitsForOldAgentWithoutConsumingNextWindow() {
+        let m = SessionController(preview: true, automaticTicks: false)
+        m.dailySchedule = DailySchedule(enabled: true, periods: [DailyPeriod(startMinute: 0, endMinute: 120), DailyPeriod(startMinute: 1320, endMinute: 1440)])
+        m.saveDailySchedule(at: date("2026-10-08T22:00:00+08:00"), calendar: calendar)
+        m.evaluateDailySchedule(at: date("2026-10-09T00:00:01+08:00"), calendar: calendar)
+        m.stop(manual: false)
+        m.evaluateDailySchedule(at: date("2026-10-09T00:00:02+08:00"), calendar: calendar)
+        XCTAssertTrue(m.running)
+        XCTAssertEqual(m.end, date("2026-10-09T02:00:00+08:00"))
+    }
+    @MainActor func testPreviewRecoveryNeverCallsPowerHelperAndClearsOwnedRecord() {
+        let m = SessionController(preview: true, automaticTicks: false)
+        m.keepAwake = KeepAwakeStatus(recoveryRecord: true, agentActive: true, clamshellBlocked: true)
+        XCTAssertTrue(m.needsRecovery)
+        m.restore(.owned)
+        XCTAssertFalse(m.needsRecovery)
+        XCTAssertEqual(m.phase, "idle")
+    }
+}
+
+extension DailyScheduleControllerTests {
+    @MainActor func testLegacyOvernightManualStopSurvivesMigration() throws {
+        let zone = NSTimeZone.default; NSTimeZone.default = calendar.timeZone
+        defer { NSTimeZone.default = zone }
+        let name = "MacBeat.migration-test.\(UUID().uuidString)"
+        let settings = UserDefaults(suiteName: name)!
+        defer { settings.removePersistentDomain(forName: name) }
+        settings.set(Data(#"{"enabled":true,"startMinute":1320,"endMinute":120}"#.utf8), forKey: "dailySchedule")
+        settings.set(date("2026-10-07T22:00:00+08:00"), forKey: "lastScheduledStart")
+        let m = SessionController(preview: true, defaults: settings, automaticTicks: false)
+        XCTAssertEqual(m.dailySchedule.periods.count, 2)
+        m.evaluateDailySchedule(at: date("2026-10-08T01:00:00+08:00"), calendar: calendar)
+        XCTAssertFalse(m.running)
+        m.evaluateDailySchedule(at: date("2026-10-08T22:00:00+08:00"), calendar: calendar)
+        XCTAssertTrue(m.running)
+    }
+    @MainActor func testRecoveryOfRunningPreviewUsesNormalStop() {
+        let m = SessionController(preview: true, automaticTicks: false)
+        m.start(); XCTAssertTrue(m.running)
+        m.restore(.owned)
+        XCTAssertFalse(m.active); XCTAssertNil(m.end)
+    }
+}

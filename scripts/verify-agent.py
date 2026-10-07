@@ -17,7 +17,7 @@ print('snapshot:', json.dumps(snapshot, ensure_ascii=False))
 if snapshot.get('power', {}).get('lidClosed') is not False:
     raise SystemExit('Open the laptop lid before running power mutation checks.')
 
-def run_case(name, close_input=False, clamshell=False):
+def run_case(name, close_input=False, clamshell=False, external_stop=False):
     process = subprocess.Popen([str(agent)], stdin=subprocess.PIPE, stdout=subprocess.PIPE, text=True, bufsize=1)
     plan = dict(mode='duration', duration=3, deadline=time.time()-978307200+3600,
                 powerOnly=False, batteryThreshold=20, requestClamshell=clamshell)
@@ -36,6 +36,10 @@ def run_case(name, close_input=False, clamshell=False):
                     break
                 event = json.loads(line)
                 events.append(event)
+                if external_stop and event['kind'] == 'running':
+                    result = subprocess.run([str(agent), '--stop-existing'], capture_output=True, text=True, timeout=10)
+                    assert result.returncode == 0, result.stdout
+                    assert any(json.loads(line)['kind'] == 'recovered' for line in result.stdout.splitlines())
                 if close_input and event['kind']=='running' and not closed:
                     process.stdin.close()
                     closed = True
@@ -60,6 +64,7 @@ def run_case(name, close_input=False, clamshell=False):
 
 run_case('deadline')
 run_case('client-pipe-closed', close_input=True)
+run_case('cooperative-external-stop', external_stop=True)
 if args.clamshell:
     run_case('native-clamshell-request-and-restore', clamshell=True)
 journal = pathlib.Path.home() / 'Library/Application Support/MacBeat/clamshell-recovery.json'
