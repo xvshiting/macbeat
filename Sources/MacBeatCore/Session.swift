@@ -100,10 +100,12 @@ public struct AgentEvent: Codable {
     public var power: PowerSnapshot?
     public var clamshellRequested: Bool?
     public var keepAwake: KeepAwakeStatus?
+    public var sleepRestore: SleepRestoreReport?
     public var closedSeconds: Int?
     public init(_ kind: String, message: String = "", end: Date? = nil, power: PowerSnapshot? = nil,
-                clamshellRequested: Bool? = nil, closedSeconds: Int? = nil, keepAwake: KeepAwakeStatus? = nil) {
+                clamshellRequested: Bool? = nil, closedSeconds: Int? = nil, keepAwake: KeepAwakeStatus? = nil, sleepRestore: SleepRestoreReport? = nil) {
         self.kind = kind; self.message = message; self.end = end; self.power = power
         self.clamshellRequested = clamshellRequested; self.closedSeconds = closedSeconds; self.keepAwake = keepAwake
+        self.sleepRestore = sleepRestore
     }
 }

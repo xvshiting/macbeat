@@ -21,7 +21,9 @@ import SwiftUI
         popover.contentViewController = NSHostingController(rootView: PopoverView(model: model))
         model.statusChanged = { [weak self] in self?.updateStatus() }
         model.safeToQuit = { [weak self] in
-            if self?.quitting == true { NSApplication.shared.reply(toApplicationShouldTerminate: true) }
+            guard let self, self.quitting, !self.model.restoringNormalSleep else { return }
+            if self.model.active { self.model.stop(); return }
+            NSApplication.shared.reply(toApplicationShouldTerminate: true)
         }
         if preview || CommandLine.arguments.contains("--show-window") {
             let controller = NSHostingController(rootView: PopoverView(model: model))
@@ -71,6 +73,7 @@ import SwiftUI
         guard model.active || model.phase == "error" else { return .terminateNow }
         quitting = true
         model.schedulingPaused = true
+        if model.restoringNormalSleep { return .terminateLater }
         model.stop()
         return .terminateLater
     }

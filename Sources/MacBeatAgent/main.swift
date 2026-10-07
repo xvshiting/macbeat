@@ -83,6 +83,27 @@ if CommandLine.arguments.contains("--inspect") {
     exit(0)
 }
 
+if CommandLine.arguments.contains("--restore-sleep") {
+    let restorer = NormalSleepRestorer(stopOwned: {
+        try engine.recovery.requestStop()
+        var failure: Error?
+        for attempt in 0..<20 {
+            do { try engine.recoverExisting(); failure = nil; break }
+            catch { failure = error; if attempt < 19 { Thread.sleep(forTimeInterval: 0.1) } }
+        }
+        if let failure { throw failure }
+    }, releaseClamshell: {
+        // Desktops have no lid and therefore no clamshell state to reset.
+        if rootProperty("AppleClamshellState") != nil { try engine.releaseShared() }
+    })
+    let report = restorer.restore()
+    // Let powerd publish policy changes before verifying the result.
+    if !report.cancelled { Thread.sleep(forTimeInterval: 0.5) }
+    engine.recovery.unlock()
+    emit(AgentEvent("sleepRestored", power: powerSnapshot(), keepAwake: keepAwakeSnapshot(), sleepRestore: report))
+    exit(report.errors.isEmpty ? 0 : 1)
+}
+
 if CommandLine.arguments.contains("--release-shared") {
     do {
         try engine.releaseShared()

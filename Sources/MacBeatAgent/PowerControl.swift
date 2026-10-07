@@ -3,6 +3,7 @@ import IOKit
 import IOKit.pwr_mgt
 import IOKit.ps
 import MacBeatCore
+import Darwin
 
 struct PowerError: LocalizedError {
     let message: String
@@ -150,5 +151,34 @@ func keepAwakeSnapshot() -> KeepAwakeStatus {
     let store = RecoveryStore()
     return KeepAwakeStatus(recoveryRecord: store.isArmed, agentActive: store.agentActive,
         clamshellBlocked: (rootProperty("AppleClamshellCausesSleep") as? Bool).map { !$0 },
-        globalSleepDisabled: rootProperty("SleepDisabled") as? Bool)
+        globalSleepDisabled: rootProperty("SleepDisabled") as? Bool,
+        blockers: sleepBlockers(), idleSleepDisabledProfiles: (try? SleepPreferences.read())?.disabledProfiles)
+}
+
+func sleepBlockers() -> [SleepBlocker]? {
+    var dictionary: Unmanaged<CFDictionary>?
+    guard IOPMCopyAssertionsByProcess(&dictionary) == kIOReturnSuccess,
+          let byPID = dictionary?.takeRetainedValue() as? [NSNumber: [[String: Any]]] else { return nil }
+    var result: [SleepBlocker] = []
+    for (pid, assertions) in byPID {
+        let relevant = assertions.filter {
+            guard let type = $0["AssertType"] as? String, let level = $0["AssertLevel"] as? NSNumber else { return false }
+            return SleepBlocker.preventsSleep(type: type, level: level.intValue)
+        }
+        guard !relevant.isEmpty else { continue }
+        var buffer = [CChar](repeating: 0, count: 1024)
+        let length = proc_name(pid.int32Value, &buffer, UInt32(buffer.count))
+        // macOS may restrict proc_name for system daemons. ps provides the
+        // public command name without requesting extra privileges.
+        let path = length > 0 ? String(cString: buffer) : (try? runTool("/bin/ps", ["-p", pid.stringValue, "-o", "comm="]).output.trimmingCharacters(in: .whitespacesAndNewlines)) ?? ""
+        let name = path.isEmpty ? "进程 \(pid)" : URL(fileURLWithPath: path).lastPathComponent
+        for assertion in relevant {
+            guard let type = assertion["AssertType"] as? String,
+                  let level = assertion["AssertLevel"] as? NSNumber,
+                  SleepBlocker.preventsSleep(type: type, level: level.intValue) else { continue }
+            result.append(SleepBlocker(pid: pid.int32Value, processName: name,
+                reason: assertion["AssertName"] as? String ?? "持续防休眠请求", type: type))
+        }
+    }
+    return Array(Set(result.map(\.id))).sorted().compactMap { id in result.first { $0.id == id } }
 }

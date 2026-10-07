@@ -35,7 +35,7 @@ Keep downloads, computations, and local services running while you step away. St
 | Adjust an active session | Changes take effect only after you apply the updated end time |
 | Battery and thermal protection | Optional AC-only operation, low-battery threshold, and stopping under elevated thermal pressure |
 | Daily schedule | Multiple same-day windows on a 24-hour dial, with drag editing and overlap merging |
-| Recovery controls | Detect MacBeat sessions and recovery records; explicitly request shared-state release |
+| Restore normal sleep | End MacBeat keep-awake, reset global sleep restrictions, and show remaining blockers |
 | Launch at login | Starts in standby, or checks the current window if you enabled a daily schedule |
 
 The menu bar icon uses a white heartbeat on a colored background: **blue** for standby, **green** for an active session, and **amber** when attention is needed. It stays visible on light and dark menu bars.
@@ -124,11 +124,11 @@ Look for a confirmed closed lid, uninterrupted observations, and no increase in 
 
 The interface uses **SwiftUI and AppKit**. A separate `MacBeatAgent` owns IOKit idle-sleep assertions and invokes the closed-lid interface when enabled. There are no third-party Swift package dependencies, telemetry, accounts, or required network services.
 
-MacBeat **does not run `pmset disablesleep` or write persistent power settings**, and it does not automatically install a privileged daemon. Test scripts only use `pmset -g` to read state.
+Normal keep-awake sessions do not change persistent power settings. The separate **Restore normal sleep** action uses `pmset` with macOS administrator authorization to set `disablesleep` to 0. Power profiles with automatic system sleep disabled (`sleep 0`) are set to a 10-minute idle timer; existing nonzero timers are preserved. MacBeat does not install a privileged daemon. Tests never execute this system reset.
 
 Sessions end on their deadline, manual stop, a lost client connection, low battery, elevated thermal pressure, or a violation of the selected power policy. A separate recovery process and a local journal help restore state if the control process exits unexpectedly. Recovery failures appear in the interface and are retried.
 
-The **Keep-awake status** view distinguishes a MacBeat control session or recovery record from the system's aggregate closed-lid policy. Opening this view only inspects state. **End leftover session** asks an identified MacBeat agent to stop and then processes its recovery record. **Release shared keep-awake** requires an explicit confirmation because the state may be shared with other utilities. It does not alter the global sleep-disabled preference or guarantee that all other sleep blockers disappear.
+The **System status** tab shows MacBeat sessions, recovery records, system sleep settings, and active sleep-blocking requests. Opening it only inspects state. **Restore normal sleep** asks for confirmation and administrator authorization, then ends the MacBeat agent and releases the shared closed-lid hold. It also disables the daily plan to prevent a scheduled restart. Cancelling administrator authorization leaves the session and plan intact. Each result is reported and verified; other applications' live assertions cannot be released on their behalf, so their process names remain visible until they stop requesting keep-awake. System services can also hold temporary requests while the display is on. The action does not force immediate sleep or terminate other programs.
 
 The private closed-lid interface changes shared system state rather than a strictly process-owned resource. Recovery cannot be guaranteed when multiple utilities control that state, or when both recovery-related processes are forcibly killed. Reopen MacBeat if it reports a recovery issue. See [IMPLEMENTATION.txt](IMPLEMENTATION.txt) for details (in Chinese).
 
@@ -157,7 +157,7 @@ The DMG and SHA-256 file are written to `dist/`. Packaging uses a separate stagi
 conda run -n kora swift test
 ```
 
-There are 51 policy, scheduling, controller, and recovery-store tests, including legacy migration, multiple daily windows, midnight handoff, overlap merging, arc movement, daylight-saving transitions, stop suppression, lock ownership, and token-matched cooperative stop requests.
+There are 63 policy, scheduling, controller, and recovery-store tests, including legacy migration, multiple daily windows, midnight handoff, overlap merging, arc movement, daylight-saving transitions, stop suppression, lock ownership, token-matched cooperative stop requests, authorization cancellation, partial reset failures, and actual assertion inspection.
 
 The following integration checks briefly acquire real power assertions. Stop any MacBeat session and keep the lid open before running them:
 

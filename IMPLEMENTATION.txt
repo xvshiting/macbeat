@@ -27,7 +27,9 @@ ACCEPTED DESIGN
 POWER ENGINE
   Separate MacBeatAgent owns IOKit assertions and the optional native
   RootDomainUserClient kPMSetClamshellSleepState (selector 12) request.
-  No pmset mutation, no power-management plist writes.
+  Normal sessions do not mutate pmset or write power-management plists.
+  Explicit normal-sleep restoration runs fixed pmset resets after macOS
+  administrator authorization; see the restore section below.
   The native selector is PRIVATE, unsupported, and changes a shared powerd
   bit. It is NOT a reference-counted, process-scoped resource.
   It may be overwritten by macOS, and API success is NOT a physical
@@ -125,3 +127,14 @@ v0.3.0 原生界面与多时段（2026-10-08）
 - --inspect 只读返回 MacBeat 日志、控制锁和系统合盖聚合状态，不能据此断言共享位所有者。
 - --stop-existing 协作结束所属会话，--release-shared 为用户确认后的显式共享位解除。
 - 未新增物理合盖验证；2026-10-08 本机全局 SleepDisabled 为 true，未擅自修改。
+
+恢复正常睡眠（2026-10-08）
+- --restore-sleep 先读取电源配置，系统管理员授权执行固定 pmset 重置命令。
+- disablesleep 归零；仅 sleep=0 的电源配置改为闲置 10 分钟，其余时间不改。
+- 授权取消时不停止会话、不修改共享位；失败和部分成功分别反馈。
+- 授权成功后协作结束 MacBeat agent，恢复记录，再解除共享合盖位。
+- 关闭每日计划防止再次自动开启；不主动调用 sleepnow，不结束其他软件进程。
+- IOPMCopyAssertionsByProcess 列出其他防休眠请求，区分屏幕亮起期间 powerd 的临时保持。
+- 检查全局配置、共享合盖结果和剩余请求；未知状态或残留不能报告完全成功。
+- 63 项测试包含管理员取消、部分失败、偏好解析和真实短时 IOKit 请求检查。
+- 全局重置命令未在开发者机器执行，管理员授权及合盖恢复需要用户实机验收。

@@ -28,7 +28,9 @@ import MacBeatCore
     @Published var keepAwake = KeepAwakeStatus()
     @Published var recoveryNotice = ""
     @Published var recoveryConfirmation: RecoveryAction?
-    enum RecoveryAction: String, Identifiable { case owned, shared; var id: String { rawValue } }
+    @Published var sleepRestoreReport: SleepRestoreReport?
+    @Published private(set) var restoringNormalSleep = false
+    enum RecoveryAction: String, Identifiable { case owned, normalSleep; var id: String { rawValue } }
     @Published var now = Date()
     @Published var loginEnabled = SMAppService.mainApp.status == .enabled
     @Published var loginNotice = ""
@@ -51,7 +53,7 @@ import MacBeatCore
     var running: Bool { phase == "running" }
     var startFailed: Bool { phase == "startFailed" }
     var statusText: String { running ? "运行中" : busy ? "处理中" : startFailed ? "开启失败" : needsRecovery ? "需要恢复" : "未开启" }
-    var busy: Bool { phase == "starting" || phase == "stopping" || phase == "recovering" || updating }
+    var busy: Bool { restoringNormalSleep || phase == "starting" || phase == "stopping" || phase == "recovering" || updating }
     var active: Bool { running || busy }
     var plan: SessionPlan {
         SessionPlan(mode: mode, duration: duration, deadline: deadline,
@@ -207,21 +209,61 @@ import MacBeatCore
     }
     func recover() { restore(.owned) }
     func restore(_ action: RecoveryAction) {
+        if action == .normalSleep { restoreNormalSleep(); return }
         guard !busy else { return }
         if running || process != nil { stop(); return }
         suppressCurrentSchedule()
         if preview {
-            if action == .owned { keepAwake.recoveryRecord = false; keepAwake.agentActive = false }
+            keepAwake.recoveryRecord = false; keepAwake.agentActive = false
             keepAwake.clamshellBlocked = false; phase = "idle"
             recoveryNotice = "界面预览，未更改系统状态。"; return
         }
         phase = "recovering"
-        runOneShot(arguments: [action == .owned ? "--stop-existing" : "--release-shared"]) { [weak self] events, code in
+        runOneShot(arguments: ["--stop-existing"]) { [weak self] events, code in
             guard let self else { return }
             if code == 0, events.contains(where: { $0.kind == "recovered" }) {
-                self.phase = "idle"; self.recoveryNotice = action == .owned ? "MacBeat 会话与恢复记录已处理。" : "已请求解除共享保持；其他应用和系统设置仍可能影响休眠。"; self.message = ""; self.inspect(); self.safeToQuit?()
+                self.phase = "idle"; self.recoveryNotice = "MacBeat 会话与恢复记录已处理。"; self.message = ""; self.inspect(); self.safeToQuit?()
             } else { self.phase = "error"; self.message = events.last?.message ?? "恢复失败，请重新打开应用后重试。" }
         }
+    }
+    func restoreNormalSleep() {
+        guard !busy else { return }
+        let previouslyPaused = schedulingPaused
+        schedulingPaused = true; restoringNormalSleep = true; sleepRestoreReport = nil
+        if preview {
+            phase = "idle"; end = nil; scheduledSession = false; requestedClamshell = false
+            keepAwake.recoveryRecord = false; keepAwake.agentActive = false
+            keepAwake.globalSleepDisabled = false; keepAwake.clamshellBlocked = false
+            keepAwake.idleSleepDisabledProfiles = []; keepAwake.blockers = keepAwake.blockers ?? []
+            finishSleepRestore(SleepRestoreReport(completed: ["界面预览，未修改系统状态。"]), previouslyPaused: previouslyPaused)
+            return
+        }
+        // The helper cooperatively stops the current agent after system
+        // authorization; heartbeat delivery continues until it has stopped.
+        runOneShot(arguments: ["--restore-sleep"]) { [weak self] events, _ in
+            guard let self else { return }
+            if let event = events.last(where: { $0.kind == "sleepRestored" }), let report = event.sleepRestore {
+                if let status = event.keepAwake { self.keepAwake = status }
+                if let power = event.power { self.power = power }
+                self.finishSleepRestore(report, previouslyPaused: previouslyPaused)
+            } else {
+                self.finishSleepRestore(SleepRestoreReport(errors: [events.last?.message ?? "恢复进程未返回结果，请重新检测系统状态。"]), previouslyPaused: previouslyPaused)
+            }
+            self.inspect()
+        }
+    }
+    private func finishSleepRestore(_ report: SleepRestoreReport, previouslyPaused: Bool) {
+        if !report.cancelled {
+            suppressCurrentSchedule()
+            dailySchedule.enabled = false; savedDailySchedule.enabled = false
+            if persistSettings, let data = try? JSONEncoder().encode(savedDailySchedule) { defaults.set(data, forKey: "dailySchedule") }
+            scheduleNotice = "恢复正常睡眠后，每日计划已关闭。"
+        }
+        sleepRestoreReport = report; restoringNormalSleep = false; schedulingPaused = previouslyPaused
+        recoveryNotice = ""; message = ""
+        if process == nil && !report.cancelled { phase = "idle"; end = nil; scheduledSession = false; releaseActivity() }
+        statusChanged?()
+        safeToQuit?()
     }
     private func releaseActivity() {
         if let activity { ProcessInfo.processInfo.endActivity(activity); self.activity = nil }

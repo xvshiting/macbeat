@@ -217,25 +217,42 @@ struct PopoverView: View {
                 }
             }.frame(maxWidth: .infinity, alignment: .leading).beatCard()
             VStack(alignment: .leading, spacing: 10) {
-                HStack { Text("系统共享合盖状态").font(.system(size: 13, weight: .semibold)); Spacer(); Text(model.keepAwake.clamshellBlocked.map { $0 ? "保持中" : "未阻止" } ?? "未知").font(.system(size: 10)).foregroundStyle(BeatStyle.muted) }
-                Text("系统的合盖结果无法确定来源，也可能受其他应用或外接显示器影响。").font(.system(size: 10)).foregroundStyle(BeatStyle.muted)
-                if model.keepAwake.globalSleepDisabled == true {
-                    Text("系统另有全局禁用睡眠设置；此处解除不会修改该设置。").font(.system(size: 10)).foregroundStyle(.orange)
+                HStack { Text("恢复正常睡眠").font(.system(size: 13, weight: .semibold)); Spacer(); Image(systemName: "moon.zzz").foregroundStyle(BeatStyle.blue) }
+                Text("结束 MacBeat 保持，关闭全局禁用睡眠，解除合盖保持。").font(.system(size: 10)).foregroundStyle(BeatStyle.muted)
+                detail("laptopcomputer", "合盖休眠", model.keepAwake.clamshellBlocked.map { $0 ? "当前受阻止" : "未受阻止" } ?? "未知")
+                if model.keepAwake.idleSleepDisabledProfiles?.isEmpty == false {
+                    Text("系统自动睡眠已关闭；恢复后将设为闲置 10 分钟。").font(.system(size: 10)).foregroundStyle(.orange)
                 }
-                if model.keepAwake.clamshellBlocked == true {
-                    Button("手动解除共享保持") { model.recoveryConfirmation = .shared }.buttonStyle(.bordered).disabled(model.active || model.keepAwake.agentActive)
-                    if model.active || model.keepAwake.agentActive { Text("请先结束 MacBeat 控制会话。").font(.system(size: 9)).foregroundStyle(BeatStyle.muted) }
-                }
+                BeatPrimary(title: model.restoringNormalSleep ? "正在恢复…" : "恢复正常睡眠", symbol: "moon.zzz", disabled: model.busy) { model.recoveryConfirmation = .normalSleep }
             }.beatCard()
+            if let blockers = model.keepAwake.blockers, !blockers.isEmpty {
+                VStack(alignment: .leading, spacing: 10) {
+                    Text("当前防休眠请求").font(.system(size: 13, weight: .semibold))
+                    ForEach(Array(Set(blockers.map(\.processName))).sorted(), id: \.self) { name in
+                        Label(name, systemImage: "app").font(.system(size: 11))
+                    }
+                    Text("请在其他程序中关闭保持运行，或退出后重新检测。系统服务的请求可能随任务结束或屏幕熄灭自行释放。").font(.system(size: 10)).foregroundStyle(BeatStyle.muted)
+                }.frame(maxWidth: .infinity, alignment: .leading).beatCard()
+            } else if model.keepAwake.blockers == nil {
+                Text("暂未读取到程序的防休眠请求，请重新检测。").font(.system(size: 10)).foregroundStyle(BeatStyle.muted)
+            }
+            if let report = model.sleepRestoreReport {
+                VStack(alignment: .leading, spacing: 9) {
+                    Text(report.summary(status: model.keepAwake)).font(.system(size: 12, weight: .semibold))
+                    ForEach(report.completed, id: \.self) { Text($0).font(.system(size: 10)).foregroundStyle(BeatStyle.muted) }
+                    ForEach(report.errors, id: \.self) { Text($0).font(.system(size: 10)).foregroundStyle(.orange) }
+                }.frame(maxWidth: .infinity, alignment: .leading).beatCard()
+            }
             if !model.recoveryNotice.isEmpty { Text(model.recoveryNotice).font(.system(size: 10)).foregroundStyle(BeatStyle.muted) }
             if !model.message.isEmpty { Text(model.message).font(.system(size: 10)).foregroundStyle(.orange) }
         }
     }
     private func recoveryDialog(_ action: SessionController.RecoveryAction) -> some View {
         VStack(alignment: .leading, spacing: 18) {
-            Text(action == .owned ? "结束 MacBeat 的保持运行？" : "解除系统共享合盖状态？").font(.system(size: 18, weight: .semibold))
-            Text(action == .owned ? "结束 MacBeat 控制会话并处理遗留记录，不会强制电脑立即休眠。本次每日计划时段将不再自动重启。" : "无法确认该状态来自哪个程序。解除可能影响其他合盖工具；不会修改全局睡眠设置，实际休眠仍受系统和其他应用影响。").font(.system(size: 12)).foregroundStyle(BeatStyle.muted)
-            HStack { Button("取消") { model.recoveryConfirmation = nil }.keyboardShortcut(.cancelAction); Spacer(); Button(action == .owned ? "结束并恢复" : "确认解除") { model.recoveryConfirmation = nil; model.restore(action) }.buttonStyle(.borderedProminent).tint(BeatStyle.blue).keyboardShortcut(.defaultAction) }
+            Text(action == .owned ? "结束 MacBeat 的保持运行？" : "恢复正常睡眠？").font(.system(size: 18, weight: .semibold))
+            Text(action == .owned ? "结束 MacBeat 控制会话并处理遗留记录，不会强制电脑立即休眠。本次每日计划时段将不再自动重启。" : "将关闭全局禁用睡眠，结束 MacBeat 保持并解除合盖保持。已关闭的自动睡眠将设为闲置 10 分钟；每日计划也将关闭。此操作可能影响其他任务，系统会要求管理员授权。").font(.system(size: 12)).foregroundStyle(BeatStyle.muted)
+            if action == .normalSleep { Text("执行后会检查结果；其他程序仍在申请防休眠时会显示程序名称。").font(.system(size: 11)).foregroundStyle(BeatStyle.muted) }
+            HStack { Button("取消") { model.recoveryConfirmation = nil }.keyboardShortcut(.cancelAction); Spacer(); Button(action == .owned ? "结束并恢复" : "确认恢复") { model.recoveryConfirmation = nil; model.restore(action) }.buttonStyle(.borderedProminent).tint(BeatStyle.blue).keyboardShortcut(.defaultAction) }
         }.padding(24).frame(width: 330).background(BeatStyle.surface)
     }
     private var settings: some View {
