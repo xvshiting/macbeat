@@ -1,0 +1,377 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MacBeat — Close the lid. Keep things moving.</title>
+<meta name="description" content="A lightweight native macOS menu bar app. Keep your Mac awake with a duration, an exact end time, or manual stop. Download MacBeat for Apple silicon.">
+<meta name="theme-color" content="#f8fafc">
+<meta property="og:type" content="website">
+<meta property="og:title" content="MacBeat — Close the lid. Keep things moving.">
+<meta property="og:description" content="A lightweight native macOS menu bar app. Keep your Mac awake with a duration, an exact end time, or manual stop. Download MacBeat for Apple silicon.">
+<link rel="canonical" href="https://xvshiting.github.io/macbeat/">
+<link rel="alternate" hreflang="en" href="https://xvshiting.github.io/macbeat/">
+<link rel="alternate" hreflang="zh-CN" href="https://xvshiting.github.io/macbeat/zh.html">
+<link rel="alternate" hreflang="x-default" href="https://xvshiting.github.io/macbeat/">
+<link rel="icon" href="assets/icon.png" type="image/png">
+<link rel="stylesheet" href="style.css">
+<script src="site.js" defer>
+</script>
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+<header class="wrap">
+<a class="brand" href="./" aria-label="MacBeat">
+<img src="assets/icon.png" alt="" width="40" height="40">MacBeat</a>
+<nav aria-label="Main navigation">
+<a href="#features">Why MacBeat</a>
+<a href="#how">How it works</a>
+<a class="language" href="zh.html" lang="zh-CN">简体中文</a>
+<a class="nav-download" href="#download">Download <span aria-hidden="true">↗</span>
+</a>
+</nav>
+</header>
+<main id="main">
+<section class="hero wrap">
+<div class="hero-copy">
+<p class="eyebrow">
+<span class="dot">
+</span>A LITTLE APP. A LITTLE MORE TIME.</p>
+<h1>Close the lid.<br>
+<span>Keep things<br>moving.</span>
+</h1>
+<p class="lead">The download, the long calculation, the local server. Let your Mac finish what it started — even when you step away.</p>
+<div class="actions">
+<a class="button" href="https://github.com/xvshiting/macbeat/releases/download/v0.1.3/MacBeat-0.1.3-arm64.dmg">
+<span aria-hidden="true">↓</span> Download for Mac</a>
+<a class="text-link" href="https://github.com/xvshiting/macbeat">View on GitHub <span aria-hidden="true">↗</span>
+</a>
+</div>
+<p class="meta">v0.1.3 prerelease · Apple silicon · macOS 13+ build target</p>
+<p class="small">Free download. No account. No subscription.</p>
+</div>
+<div class="hero-visual">
+<div class="orbit orbit-one">
+</div>
+<div class="orbit orbit-two">
+</div>
+<div class="demo">
+<div class="demo-top">
+<span class="demo-brand">
+<svg viewBox="0 0 64 40" fill="none" aria-hidden="true">
+<path d="M2 21h12l7-17 10 32 9-23 6 8h16" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>MacBeat</span>
+<span class="live">
+<span class="dot">
+</span>SESSION ACTIVE</span>
+</div>
+<div class="pulse">
+<svg viewBox="0 0 64 40" fill="none" aria-hidden="true">
+<path d="M2 21h12l7-17 10 32 9-23 6 8h16" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
+</div>
+<h2>Keeping things moving</h2>
+<p class="demo-sub">Your Mac stays awake. The display can rest.</p>
+<div class="mode-label">WHEN TO FINISH</div>
+<div class="modes" role="group" aria-label="WHEN TO FINISH">
+<button type="button" aria-pressed="true" data-mode="0">Duration</button>
+<button type="button" aria-pressed="false" data-mode="1">End time</button>
+<button type="button" aria-pressed="false" data-mode="2">Manual</button>
+</div>
+<div aria-live="polite">
+<div class="mode-output" data-output="0">
+<strong>01:00:00</strong>
+<p>A little more time to finish.</p>
+</div>
+<div class="mode-output" data-output="1" hidden>
+<strong>23:00</strong>
+<p>An exact time. One less thing to remember.</p>
+</div>
+<div class="mode-output" data-output="2" hidden>
+<strong>Your call.</strong>
+<p>Keep going until you stop the session.</p>
+</div>
+</div>
+<div class="demo-settings">
+<div>
+<span>Closed-lid operation</span>
+<span class="on">Enabled <span aria-hidden="true">✓</span>
+</span>
+</div>
+<div>
+<span>Power policy</span>
+<span>Battery allowed</span>
+</div>
+</div>
+<div class="heartbeat-line">
+<svg viewBox="0 0 64 40" fill="none" aria-hidden="true">
+<path d="M2 21h12l7-17 10 32 9-23 6 8h16" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
+<span>LESS TO MANAGE. MORE TO FINISH.</span>
+</div>
+</div>
+<p class="demo-caption">Interactive feature preview · Current Mac app UI is in Chinese</p>
+</div>
+</section>
+<div class="principles wrap">
+<span>
+<i aria-hidden="true">✓</i>Native Swift app</span>
+<span>
+<i aria-hidden="true">✓</i>Lives in your menu bar</span>
+<span>
+<i aria-hidden="true">✓</i>No telemetry</span>
+</div>
+<section class="section wrap" id="features">
+<div class="section-intro">
+<div>
+<p class="eyebrow">MADE FOR THE IN-BETWEEN</p>
+<h2>Step away.<br>Leave the work running.</h2>
+</div>
+<p>A small menu bar companion for the tasks that need more time than you do.</p>
+</div>
+<div class="features">
+<article>
+<span class="number">01</span>
+<h3>Let the download finish.</h3>
+<p>Keep the system awake while files download or a long-running job completes. The screen can still turn off.</p>
+</article>
+<article>
+<span class="number">02</span>
+<h3>Close up, carry on.</h3>
+<p>Enable closed-lid operation when you need it. Keep your Mac on a ventilated desk while it works.</p>
+</article>
+<article>
+<span class="number">03</span>
+<h3>Give it a stopping point.</h3>
+<p>Pick 30 minutes, an hour, or two. Set an exact date and time. Or stop the session yourself.</p>
+</article>
+</div>
+</section>
+<section class="schedule" id="how">
+<div class="wrap">
+<div class="section-intro">
+<div>
+<p class="eyebrow">ON YOUR SCHEDULE</p>
+<h2>A finish line.<br>Not another reminder.</h2>
+</div>
+<p>A quick task or an overnight run: choose the ending that fits. When the session ends, your normal sleep policy takes over.</p>
+</div>
+<div class="timecards">
+<article>
+<span class="number">30m / 1h / 2h</span>
+<h3>Just a little longer</h3>
+<p>Choose a duration and get back to your day.</p>
+</article>
+<article>
+<span class="number">Tomorrow, 01:30</span>
+<h3>At a specific time</h3>
+<p>Set a local date and time, even across midnight.</p>
+</article>
+<article>
+<span class="number">Until you stop</span>
+<h3>Take your time</h3>
+<p>Keep running until you stop or a protection condition is reached.</p>
+</article>
+</div>
+<div class="protection">
+<span class="shield" aria-hidden="true">✓</span>
+<div>
+<h3>Thoughtful about power.</h3>
+<p>Choose AC-only operation or allow battery use. A low-battery threshold and thermal protection can end the session when needed.</p>
+</div>
+</div>
+</div>
+</section>
+<section class="test section wrap">
+<div>
+<p class="eyebrow">OBSERVED, WITH THE LID CLOSED</p>
+<h2>A small app.<br>A real-world check.</h2>
+<p>In one physical test on an Apple silicon MacBook Pro, MacBeat kept running on battery with the lid closed. An independent observer continued recording every second.</p>
+<a class="text-link" href="https://github.com/xvshiting/macbeat/blob/main/README.md#compatibility-and-real-world-testing">See the test and compatibility notes ↗</a>
+</div>
+<div class="test-result">
+<div class="stats">
+<div>
+<strong>8<span>m</span> 8<span>s</span>
+</strong>
+<p>lid closed</p>
+</div>
+<div>
+<strong>0<span>s</span>
+</strong>
+<p>sleep detected</p>
+</div>
+</div>
+<div class="signal" aria-hidden="true">
+<i>
+</i>
+<i>
+</i>
+<i>
+</i>
+<i>
+</i>
+<i>
+</i>
+<i>
+</i>
+<i>
+</i>
+<i>
+</i>
+<i>
+</i>
+<i>
+</i>
+<i>
+</i>
+<i>
+</i>
+<i>
+</i>
+<i>
+</i>
+<i>
+</i>
+<i>
+</i>
+<i>
+</i>
+<i>
+</i>
+<i>
+</i>
+<i>
+</i>
+<i>
+</i>
+<i>
+</i>
+<i>
+</i>
+<i>
+</i>
+<i>
+</i>
+<i>
+</i>
+<i>
+</i>
+<i>
+</i>
+<i>
+</i>
+<i>
+</i>
+<i>
+</i>
+<i>
+</i>
+<i>
+</i>
+<i>
+</i>
+<i>
+</i>
+<i>
+</i>
+<i>
+</i>
+<i>
+</i>
+<i>
+</i>
+<i>
+</i>
+<i>
+</i>
+<i>
+</i>
+<i>
+</i>
+<i>
+</i>
+</div>
+<p class="test-note">October 5, 2026 · macOS 27.0 (26A428). This verifies one configuration, not every Mac or macOS version. Closed-lid control uses a private IOKit interface and may change with system updates.</p>
+</div>
+</section>
+<section class="installation wrap" id="download">
+<p class="eyebrow">UP AND RUNNING</p>
+<h2>Three steps.<br>Then get on with your day.</h2>
+<div class="steps">
+<article>
+<span class="number">01</span>
+<h3>Download & drag</h3>
+<p>Open the DMG and drag MacBeat into Applications.</p>
+</article>
+<article>
+<span class="number">02</span>
+<h3>Find the heartbeat</h3>
+<p>Open MacBeat. Its icon lives in the menu bar, with no Dock icon.</p>
+</article>
+<article>
+<span class="number">03</span>
+<h3>Choose your time</h3>
+<p>Check your power settings, pick an ending, and start. Green means active.</p>
+</article>
+</div>
+<aside class="notice">
+<div>
+<h3>Before your first launch</h3>
+<p>v0.1.3 is ad-hoc signed and not Apple-notarized. macOS may block the first launch. Verify the release source and checksum, then follow the installation guide. AC-only operation is enabled by default.</p>
+</div>
+<a class="text-link" href="https://github.com/xvshiting/macbeat/blob/main/README.md#download-and-install">Read the installation guide ↗</a>
+</aside>
+</section>
+<section class="faq section wrap">
+<p class="eyebrow">A FEW GOOD QUESTIONS</p>
+<div>
+<details>
+<summary>Will my screen stay on?<span aria-hidden="true">+</span>
+</summary>
+<p>No. MacBeat keeps the system awake, but allows the display to turn off. A dark screen alone does not mean your tasks have stopped.</p>
+</details>
+<details>
+<summary>Does it work on every Mac?<span aria-hidden="true">+</span>
+</summary>
+<p>The download is for Apple silicon, with a macOS 13 minimum build target. Closed-lid operation has been physically verified on one MacBook Pro configuration. Other OS versions and setups need testing; no Intel binary is currently published.</p>
+</details>
+<details>
+<summary>Does it change my permanent sleep settings?<span aria-hidden="true">+</span>
+</summary>
+<p>MacBeat does not run pmset disablesleep or write persistent power settings. Sessions use temporary requests, with a helper and recovery process. Closed-lid control uses shared system state, so avoid running multiple lid-control utilities together.</p>
+</details>
+<details>
+<summary>What happens when the timer finishes?<span aria-hidden="true">+</span>
+</summary>
+<p>MacBeat releases its keep-awake requests. Your Mac returns to its normal sleep policy; the app does not force immediate sleep.</p>
+</details>
+<details>
+<summary>Why did you build it?<span aria-hidden="true">+</span>
+</summary>
+<p>We expected to find an existing app that fit our workflow. After trying the options, we still wanted something simpler: a lightweight menu bar app, a clear end time, and closed-lid operation we could test ourselves. So we built MacBeat.</p>
+</details>
+</div>
+</section>
+<section class="closing wrap">
+<img src="assets/icon.png" alt="" width="72" height="72">
+<h2>A little heartbeat.<br>A little more done.</h2>
+<p>Let your Mac keep working. You can step away.</p>
+<a class="button" href="https://github.com/xvshiting/macbeat/releases/download/v0.1.3/MacBeat-0.1.3-arm64.dmg">
+<span aria-hidden="true">↓</span> Download for Mac</a>
+<p class="meta">v0.1.3 prerelease · Apple silicon · macOS 13+ build target</p>
+</section>
+</main>
+<footer class="wrap">
+<div>
+<a class="brand" href="./">MacBeat</a>
+<p>Made for the work still in progress.</p>
+</div>
+<div>
+<a href="https://github.com/xvshiting/macbeat/blob/main/README.md">Documentation</a>
+<a href="https://github.com/xvshiting/macbeat/issues">Feedback</a>
+<a href="https://github.com/xvshiting/macbeat">GitHub ↗</a>
+</div>
+</footer>
+</body>
+</html>

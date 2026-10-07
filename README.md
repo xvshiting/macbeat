@@ -1,119 +1,121 @@
 <p align="center">
-  <img src="docs/images/icon.png" width="96" alt="MacBeat 图标">
+  <img src="docs/images/icon.png" width="96" alt="MacBeat icon">
 </p>
 
 <h1 align="center">MacBeat</h1>
-<p align="center"><strong>合上盖子，工作继续。</strong><br>一个轻巧的原生 macOS 菜单栏保持唤醒工具。</p>
+<p align="center"><strong>Close the lid. Keep things moving.</strong><br>A lightweight, native macOS menu bar app that keeps your Mac awake.</p>
 <p align="center">
   <a href="https://github.com/xvshiting/macbeat/releases"><img src="https://img.shields.io/github/v/release/xvshiting/macbeat?include_prereleases&label=release" alt="GitHub Release"></a>
-  <img src="https://img.shields.io/badge/macOS-13%2B-111111?logo=apple" alt="macOS 13+">
-  <img src="https://img.shields.io/badge/download-Apple%20silicon-2877ef" alt="Apple silicon">
+  <img src="https://img.shields.io/badge/macOS-13%2B-111111?logo=apple" alt="macOS 13+ build target">
+  <img src="https://img.shields.io/badge/download-Apple%20silicon-2877ef" alt="Apple silicon download">
   <img src="https://img.shields.io/badge/Swift-native-f05138?logo=swift&logoColor=white" alt="Native Swift">
 </p>
+<p align="center"><strong>English</strong> · <a href="README.zh-CN.md">简体中文</a></p>
 <p align="center">
-  <a href="https://github.com/xvshiting/macbeat/releases/tag/v0.1.3"><strong>下载 DMG</strong></a> ·
-  <a href="#开始使用">开始使用</a> ·
-  <a href="#兼容性与实测">兼容性与实测</a> ·
-  <a href="#从源码构建">从源码构建</a>
+  <a href="https://xvshiting.github.io/macbeat/"><strong>Website</strong></a> ·
+  <a href="https://github.com/xvshiting/macbeat/releases/tag/v0.1.3"><strong>Download DMG</strong></a> ·
+  <a href="#getting-started">Getting started</a> ·
+  <a href="#compatibility-and-real-world-testing">Compatibility</a> ·
+  <a href="#build-from-source">Build from source</a>
 </p>
 
-MacBeat 用来让下载、计算、本地服务等任务在你离开电脑后继续运行。开启一次会话，选择何时结束；需要合盖运行时，打开“合盖时保持运行”。它常驻菜单栏，关闭面板不会结束会话。
+Keep downloads, computations, and local services running while you step away. Start a session, choose when it ends, and enable closed-lid operation when you need it. MacBeat lives in the menu bar; closing its panel does not stop your session.
 
-**系统保持唤醒，屏幕仍可正常熄灭。** MacBeat 当前不提供屏幕常亮功能。
+**Your Mac stays awake. Its display can still turn off.** MacBeat does not currently offer an always-on display mode. The native app's current interface is in Simplified Chinese; this README and the website are available in English and Chinese.
 
-## 功能
+## Features
 
-| 功能 | 行为 |
+| Feature | What it does |
 | --- | --- |
-| 开盖保持唤醒 | 防止因长时间没有键鼠操作而自动休眠 |
-| 合盖保持运行 | 可选的合盖控制，让 MacBook 合上盖子后继续工作 |
-| 按时长结束 | 30 分钟、1 小时、2 小时 |
-| 指定结束时间 | 直接选择本地日期和时间，支持跨天 |
-| 手动停止 | 持续运行，直到手动结束或触发保护条件 |
-| 运行中调整时间 | 修改后点击“更新结束时间”才生效 |
-| 电池与温度保护 | 可选仅接电运行、低电量阈值；较高温度压力时结束会话 |
-| 登录时启动 | 可选启动后在菜单栏待命，不自动开启会话 |
+| Keep awake with the lid open | Prevents automatic idle sleep |
+| Optional closed-lid operation | Requests continued operation when you close your MacBook |
+| Duration | Run for 30 minutes, 1 hour, or 2 hours |
+| Exact end time | Choose a local date and time, including the next day |
+| Manual stop | Continue until you stop the session or a protection condition is reached |
+| Adjust an active session | Changes take effect only after you apply the updated end time |
+| Battery and thermal protection | Optional AC-only operation, low-battery threshold, and stopping under elevated thermal pressure |
+| Launch at login | Starts in standby; never automatically starts a keep-awake session |
 
-菜单栏以颜色区分状态，白色心跳线在深浅背景下都保持可见：
+The menu bar icon uses a white heartbeat on a colored background: **blue** for standby, **green** for an active session, and **amber** when attention is needed. It stays visible on light and dark menu bars.
 
-<p align="center"><img src="docs/images/menu-bar-icons.png" width="600" alt="MacBeat 菜单栏图标：蓝色待机、绿色运行、橙色需要处理；适配深浅背景"></p>
+<p align="center"><img src="docs/images/menu-bar-icons.png" width="600" alt="Blue standby, green active, and amber attention icons on light and dark backgrounds; labels in Chinese"></p>
 
-## 下载与安装
+## Download and install
 
-1. 前往 [Releases](https://github.com/xvshiting/macbeat/releases)，下载 `MacBeat-0.1.3-arm64.dmg`。
-2. 打开 DMG，将 **MacBeat.app 拖入 Applications**。
-3. 从“应用程序”打开 MacBeat，在屏幕顶部菜单栏找到心跳图标。它不显示 Dock 图标。
+1. Download `MacBeat-0.1.3-arm64.dmg` from [Releases](https://github.com/xvshiting/macbeat/releases/tag/v0.1.3).
+2. Open the DMG and **drag MacBeat.app into Applications**.
+3. Open MacBeat from Applications. Find its heartbeat icon in the menu bar; it has no Dock icon.
 
-当前发行包面向 **Apple 芯片（arm64）**。项目的最低构建目标为 macOS 13，但完整合盖行为尚未覆盖所有系统版本；请阅读下方实测范围。
+The published binary is for **Apple silicon (arm64)**. The minimum build target is macOS 13; closed-lid behavior has not been tested on every supported OS version. See the test scope below.
 
-### 首次打开的系统提示
+### First-launch security prompt
 
-当前版本采用本地 ad-hoc 签名，**尚未使用 Developer ID 发行签名，也未经过 Apple 公证**。从互联网下载后，macOS 可能阻止首次打开；这份 DMG 不保证免提示安装。
+This release is **ad-hoc signed, without a Developer ID distribution signature or Apple notarization**. macOS may block the first launch after downloading it. A prompt-free installation is not guaranteed.
 
-请先确认文件来自本仓库的 Release，并核对校验值。若决定允许该应用，可参考 Apple 的[打开来自未知开发者的 Mac App](https://support.apple.com/zh-cn/guide/mac-help/mh40616/mac)说明，在系统设置中针对该应用处理提示。也可以审阅源码后自行构建，无需关闭系统的全局安全检查。
+Confirm that the file came from this repository's Release and verify its checksum. If you choose to allow the app, follow Apple's [instructions for opening a Mac app from an unknown developer](https://support.apple.com/guide/mac-help/mh40616/mac) to handle the prompt for this app in System Settings. You can also review the source and build it yourself. There is no need to disable system-wide security checks.
 
-下载同一 Release 中的 `.sha256` 文件，在下载目录执行：
+Download the `.sha256` file from the same release, then run this in your download directory:
 
 ```sh
 shasum -a 256 -c MacBeat-0.1.3-arm64.dmg.sha256
 ```
 
-更新时先停止会话并退出旧版本，再替换应用。更新后重新开启保持运行。
+To update, stop your session and quit the old version before replacing the app. Start a new session after reopening it.
 
-## 开始使用
+## Getting started
 
-1. 点击菜单栏里的 MacBeat 图标。
-2. 在“设置”中选择是否允许使用电池，以及是否开启 **合盖时保持运行**。默认仅接通电源时运行；若使用电池，请关闭此限制。
-3. 选择“按时长”“到时间”或“手动停止”，点击 **开启保持运行**。
-4. 图标变绿，界面显示“运行中”。面板关闭后，会话继续。
-5. 到达结束时间或点击“停止保持运行”后，MacBeat 释放自己的保持请求，交还系统睡眠策略；它不会强制电脑立即睡眠。
+1. Click MacBeat in the menu bar.
+2. Open settings (设置). Choose whether to allow battery operation and whether to keep running with the lid closed (合盖时保持运行). **AC-only operation is enabled by default**; turn this restriction off to use battery power.
+3. Choose a duration (按时长), an exact end time (到时间), or manual stop (手动停止). Click the blue start button (开启保持运行).
+4. The icon turns green and the panel reports an active session. You can close the panel.
+5. When the timer ends or you stop the session, MacBeat releases its requests and returns control to the system's sleep policy. It does not force your Mac to sleep immediately.
 
-### 两种运行方式
+### Two operating modes
 
-| 合盖设置 | 开盖闲置 | 合盖 | 开盖唤醒后 |
+| Closed-lid setting | Idle with lid open | Lid closed | After waking and reopening |
 | --- | --- | --- | --- |
-| 开启 | 保持系统唤醒 | 请求保持运行 | 继续当前会话；如果实际发生了系统休眠，会明确报告中断 |
-| 关闭 | 防止空闲休眠 | 仍可按系统策略休眠 | 若尚未到时且运行条件允许，继续防止空闲休眠 |
+| Enabled | Keeps the system awake | Requests continued operation | Continues the session; reports an interruption if the system actually slept |
+| Disabled | Prevents idle sleep | May sleep according to system policy | Resumes idle-sleep prevention if time and operating conditions still allow it |
 
-屏幕变黑不等于电脑睡眠。判断任务是否持续运行，应检查任务进度、连续记录或系统休眠日志。
+A black display does not mean the computer is asleep. Check task progress, continuous observations, or system sleep logs to confirm continued operation.
 
-## 兼容性与实测
+## Compatibility and real-world testing
 
-**已完成一次真实合盖测试：** 2026 年 10 月 5 日，一台 Apple 芯片 MacBook Pro，macOS 27.0（26A428），电池供电，开启合盖控制后连续合盖约 **8 分 8 秒**。独立观察程序每秒记录持续产生，检测到的休眠时间为 **0 秒**，系统日志中也没有该时间段的休眠记录。
+**One physical closed-lid test has been completed:** on October 5, 2026, an Apple silicon MacBook Pro running macOS 27.0 (26A428), on battery power, kept running with the lid closed for approximately **8 minutes 8 seconds**. An independent observer continued recording every second, detected **0 seconds of sleep**, and system logs showed no sleep event during that interval.
 
-这说明功能在上述机器与配置上有效，**不代表所有 Mac、外接显示器组合、电源切换或 macOS 版本都已经验证**。目前没有发布 Intel 预编译包。
+This verifies that particular machine and configuration. **Other Macs, OS versions, external-display configurations, and power transitions have not all been verified.** No prebuilt Intel binary is currently published.
 
-合盖控制使用非公开 IOKit 接口。系统更新可能改变其行为；请勿同时使用其他合盖控制工具。第一次使用、更新 macOS 或改变外接设备后，建议做一次短时间合盖测试。运行时请把电脑放在通风的桌面上。
+Closed-lid control uses a private IOKit interface; system updates may change its behavior. Avoid running other closed-lid utilities at the same time. Run a short physical test on first use, after macOS updates, or after changing connected devices. Keep your Mac on a well-ventilated desk while it runs.
 
-### 自己做一次合盖测试
+### Run your own closed-lid test
 
-先在 MacBeat 开启合盖会话，然后在终端启动独立观察程序（需要 Python 3）：
+Start a closed-lid session in MacBeat, then run the independent observer from a source checkout (Python 3 required):
 
 ```sh
 python3 scripts/observe-lid.py --seconds 300 --output /tmp/macbeat-lid-test.jsonl
 ```
 
-合盖两分钟，再打开。观察程序不申请任何防睡眠权限，也不修改电源设置。日志字段：
+Close the lid for two minutes, then reopen it. The observer does not acquire any keep-awake assertions or change power settings. Its log includes:
 
-- `lidClosed`：当时是否合盖。
-- `gap`：与上一条记录的间隔，正常约为 1 秒。
-- `sleepSeconds`：通过 macOS 连续时钟与运行时钟的差值估算累计休眠时间。
+- `lidClosed`: whether the lid was closed.
+- `gap`: interval since the previous record; normally about one second.
+- `sleepSeconds`: estimated cumulative sleep, calculated from the difference between macOS continuous and uptime clocks.
 
-只有在确认盖子确实关闭、记录持续产生、休眠时间没有增长时，才算观察到合盖连续运行。接口返回成功或界面显示“运行中”本身不足以证明这一点。输出路径需尚不存在，以免覆盖以前的测试记录。
+Look for a confirmed closed lid, uninterrupted observations, and no increase in sleep time. A successful API call or an active-session label alone does not prove continued operation. Choose an output path that does not already exist to avoid overwriting earlier observations.
 
-## 实现与恢复
+## Implementation and recovery
 
-界面由 **SwiftUI + AppKit** 实现。独立的 `MacBeatAgent` 持有 IOKit 防空闲休眠请求，并按设置调用合盖接口。项目没有第三方 Swift 包依赖，不发送遥测，不需要账户或网络服务。
+The interface uses **SwiftUI and AppKit**. A separate `MacBeatAgent` owns IOKit idle-sleep assertions and invokes the closed-lid interface when enabled. There are no third-party Swift package dependencies, telemetry, accounts, or required network services.
 
-MacBeat **不执行 `pmset disablesleep`，不写入持久电源设置**，也不会自动安装特权守护进程。测试脚本中的 `pmset -g` 仅用于读取状态。
+MacBeat **does not run `pmset disablesleep` or write persistent power settings**, and it does not automatically install a privileged daemon. Test scripts only use `pmset -g` to read state.
 
-会话会在到时、手动停止、连接断开、低电量、较高温度压力，或不满足已选电源条件时结束。独立恢复进程与本地恢复记录用于处理控制进程异常退出；失败会显示在界面中并重试。
+Sessions end on their deadline, manual stop, a lost client connection, low battery, elevated thermal pressure, or a violation of the selected power policy. A separate recovery process and a local journal help restore state if the control process exits unexpectedly. Recovery failures appear in the interface and are retried.
 
-非公开合盖接口修改的是共享系统状态，并非严格由单个进程拥有的资源。因此，多个控制工具并用、两个恢复相关进程同时被强制终止等情况无法提供绝对恢复保证。若出现恢复提示，请重新打开 MacBeat 处理；不要把接口调用成功视为所有场景下的保证。更多实现细节见 [IMPLEMENTATION.txt](IMPLEMENTATION.txt)。
+The private closed-lid interface changes shared system state rather than a strictly process-owned resource. Recovery cannot be guaranteed when multiple utilities control that state, or when both recovery-related processes are forcibly killed. Reopen MacBeat if it reports a recovery issue. See [IMPLEMENTATION.txt](IMPLEMENTATION.txt) for details (in Chinese).
 
-## 从源码构建
+## Build from source
 
-需要 macOS、Swift 5.9 或更新版本及 Xcode Command Line Tools。本次发行使用 Swift 6.4 构建。
+Requires macOS, Swift 5.9 or later, and Xcode Command Line Tools. The published release was built with Swift 6.4.
 
 ```sh
 git clone https://github.com/xvshiting/macbeat.git
@@ -122,44 +124,54 @@ bash scripts/build.sh
 open dist/MacBeat.app
 ```
 
-生成拖拽安装的 DMG：
+Create a drag-to-install DMG:
 
 ```sh
 bash scripts/package-dmg.sh
 ```
 
-输出位于 `dist/`，包含 DMG 和 SHA-256 校验文件。打包脚本使用独立暂存目录，不覆盖正在运行的开发版本。默认按构建机器架构编译；没有执行 Apple 公证步骤。
+The DMG and SHA-256 file are written to `dist/`. Packaging uses a separate staging directory so it does not overwrite a running development app. Builds use the host architecture by default; the script does not perform Apple notarization.
 
-### 测试
+### Tests
 
 ```sh
 swift test
 ```
 
-目前有 17 项策略与界面状态测试，覆盖结束时间、供电条件、低电量、温度、连接断开、睡眠后处理和启动失败状态。
+There are currently 17 policy and controller-state tests covering deadlines, power conditions, low battery, thermal pressure, lost connections, sleep handling, and startup failures.
 
-以下集成检查会短暂申请真实的电源保持请求。请先停止 MacBeat 会话，保持盖子打开，再执行：
+The following integration checks briefly acquire real power assertions. Stop any MacBeat session and keep the lid open before running them:
 
 ```sh
 python3 scripts/verify-agent.py
-# 额外验证合盖接口的申请与恢复，不等于物理合盖测试：
+# Also checks requesting and restoring closed-lid control; not a physical lid test:
 python3 scripts/verify-agent.py --clamshell
 ```
 
-维护者本地使用 Conda `kora` 环境时，可在测试命令前加 `conda run -n kora`。GitHub Actions 会编译、执行单元测试并生成 DMG 构建产物，不在托管运行器上修改合盖状态。
+Maintainers using the local Conda `kora` environment can prefix test commands with `conda run -n kora`. GitHub Actions compiles, runs unit tests, and packages a DMG without changing closed-lid state on hosted runners.
 
-### 目录
+### Project layout
 
 ```text
-Sources/MacBeat/          菜单栏、界面和会话控制
-Sources/MacBeatAgent/     电源请求与异常恢复
-Sources/MacBeatCore/      时间计划、停止策略与通信数据
-Tests/                   策略和界面状态测试
-Resources/               应用元数据
-scripts/                 构建、打包和实机观察工具
-prototype/               早期界面设计，非运行版本
+Sources/MacBeat/          Menu bar, interface, and session controller
+Sources/MacBeatAgent/     Power assertions and recovery
+Sources/MacBeatCore/      Scheduling, stop policies, and IPC data
+Tests/                   Policy and controller-state tests
+Resources/               App metadata
+scripts/                 Build, packaging, and observation tools
+website/                 English and Chinese product website
+prototype/               Early UI explorations, not the shipped app
 ```
 
-## 反馈问题
+### Product website
 
-欢迎通过 [Issues](https://github.com/xvshiting/macbeat/issues) 提交反馈。请附上 macOS 版本、芯片类型、供电方式、是否接外屏、合盖设置，以及实际现象是屏幕熄灭还是任务暂停。分享日志前请移除个人信息。
+The [product website](https://xvshiting.github.io/macbeat/) is a static site in `website/`, with English at `/` and Chinese at `/zh.html`. The [Pages workflow](.github/workflows/pages.yml) deploys changes to that directory from `main` to GitHub Pages. To preview locally:
+
+```sh
+python3 -m http.server 5181 --directory website
+# Open http://localhost:5181
+```
+
+## Report an issue
+
+Please [open an issue](https://github.com/xvshiting/macbeat/issues) with your macOS version, chip, power source, external-display setup, closed-lid setting, and whether the display turned off or the actual task stopped. Remove personal information before sharing logs.
