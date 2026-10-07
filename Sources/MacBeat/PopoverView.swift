@@ -195,7 +195,6 @@ struct PopoverView: View {
                 Button { model.showSettings.toggle() } label: { Image(systemName: model.showSettings ? "chevron.left" : "gearshape") }.buttonStyle(.plain).accessibilityLabel(model.showSettings ? "返回" : "设置")
                 Text(model.powerOnly ? "仅接通电源时运行" : "允许使用电池运行").font(.system(size: 9))
                 Spacer(minLength: 4)
-                Button { model.showSettings = false; page = .health; model.inspect() } label: { Label(model.needsRecovery ? "有待恢复的保持" : "系统状态", systemImage: "checkmark.shield") }.buttonStyle(.plain).font(.system(size: 9))
             }.foregroundStyle(BeatStyle.muted).padding(.horizontal, 20).padding(.vertical, 13)
         }
     }
