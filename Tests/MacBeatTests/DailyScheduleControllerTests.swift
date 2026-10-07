@@ -15,6 +15,11 @@ final class DailyScheduleControllerTests: XCTestCase {
         model.saveDailySchedule(at: now, calendar: calendar)
     }
     @MainActor func testAutomaticallyStartsAndStopsWithFixedDeadline() {
+        // tick() follows the machine's local calendar. Keep it consistent with
+        // the Shanghai calendar used to create this simulated session.
+        let originalZone = NSTimeZone.default
+        NSTimeZone.default = calendar.timeZone
+        defer { NSTimeZone.default = originalZone }
         let model = model()
         enable(model, at: date("2026-10-07T08:59:00+08:00"))
         XCTAssertFalse(model.running)
