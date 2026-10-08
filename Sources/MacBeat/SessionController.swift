@@ -107,7 +107,7 @@ import MacBeatCore
         powerOnly = settings.object(forKey: "powerOnly") as? Bool ?? true
         batteryThreshold = settings.object(forKey: "batteryThreshold") as? Int ?? 20
         clamshell = settings.object(forKey: "clamshell") as? Bool ?? true
-        lockOnLidClose = settings.object(forKey: "lockOnLidClose") as? Bool ?? false
+        lockOnLidClose = settings.object(forKey: "lockOnLidClose") as? Bool ?? true
         let originalScheduleData = settings.data(forKey: "dailySchedule")
         let schedule = originalScheduleData.flatMap { try? JSONDecoder().decode(DailySchedule.self, from: $0) } ?? DailySchedule()
         dailySchedule = schedule

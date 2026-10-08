@@ -22,7 +22,7 @@ public struct SessionPlan: Codable, Equatable {
 
     public init(mode: EndMode = .duration, duration: TimeInterval = 7200,
                 deadline: Date = Date().addingTimeInterval(7200), powerOnly: Bool = true,
-                batteryThreshold: Int = 20, requestClamshell: Bool = true, lockOnLidClose: Bool = false) {
+                batteryThreshold: Int = 20, requestClamshell: Bool = true, lockOnLidClose: Bool = true) {
         self.mode = mode; self.duration = duration; self.deadline = deadline
         self.powerOnly = powerOnly; self.batteryThreshold = batteryThreshold
         self.requestClamshell = requestClamshell
@@ -40,7 +40,7 @@ public struct SessionPlan: Codable, Equatable {
         powerOnly = try values.decode(Bool.self, forKey: .powerOnly)
         batteryThreshold = try values.decode(Int.self, forKey: .batteryThreshold)
         requestClamshell = try values.decode(Bool.self, forKey: .requestClamshell)
-        lockOnLidClose = try values.decodeIfPresent(Bool.self, forKey: .lockOnLidClose) ?? false
+        lockOnLidClose = try values.decodeIfPresent(Bool.self, forKey: .lockOnLidClose) ?? true
     }
 
     public func endDate(now: Date) throws -> Date? {

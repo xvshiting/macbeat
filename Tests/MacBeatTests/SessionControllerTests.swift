@@ -8,11 +8,14 @@ final class SessionControllerTests: XCTestCase {
         let defaults = try XCTUnwrap(UserDefaults(suiteName: name))
         defer { defaults.removePersistentDomain(forName: name) }
         let model = SessionController(preview: true, defaults: defaults, automaticTicks: false)
-        XCTAssertFalse(model.lockOnLidClose)
+        XCTAssertTrue(model.lockOnLidClose)
         model.lockOnLidClose = true; model.saveSettings(); model.start()
         XCTAssertEqual(model.appliedPlan?.lockOnLidClose, true)
         let reloaded = SessionController(preview: true, defaults: defaults, automaticTicks: false)
         XCTAssertTrue(reloaded.lockOnLidClose)
+        reloaded.lockOnLidClose = false; reloaded.saveSettings()
+        let disabled = SessionController(preview: true, defaults: defaults, automaticTicks: false)
+        XCTAssertFalse(disabled.lockOnLidClose)
         model.consume(try JSONEncoder().encode(AgentEvent("lockState", message: "未能确认锁屏")) + Data([10]))
         XCTAssertTrue(model.running); XCTAssertEqual(model.lockNotice, "未能确认锁屏")
     }

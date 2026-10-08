@@ -76,12 +76,12 @@ final class SessionTests: XCTestCase {
         let decoded = try JSONDecoder().decode(AgentCommand.self, from: JSONEncoder().encode(command))
         XCTAssertEqual(decoded.plan, command.plan)
     }
-    func testOldSessionPlanDoesNotEnableLockingAndNewPlanRoundTrips() throws {
+    func testOldSessionPlanUsesDefaultLockingAndNewPlanRoundTrips() throws {
         let plan = SessionPlan(lockOnLidClose: true)
         let data = try JSONEncoder().encode(plan)
         XCTAssertEqual(try JSONDecoder().decode(SessionPlan.self, from: data), plan)
         var old = try XCTUnwrap(JSONSerialization.jsonObject(with: data) as? [String: Any])
         old.removeValue(forKey: "lockOnLidClose")
-        XCTAssertFalse(try JSONDecoder().decode(SessionPlan.self, from: JSONSerialization.data(withJSONObject: old)).lockOnLidClose)
+        XCTAssertTrue(try JSONDecoder().decode(SessionPlan.self, from: JSONSerialization.data(withJSONObject: old)).lockOnLidClose)
     }
 }
