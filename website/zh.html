@@ -42,12 +42,12 @@
 </h1>
 <p class="lead">还没下完的文件、正在进行的计算、运行中的本地服务。暂时离开，让 Mac 把手头的事做完。</p>
 <div class="actions">
-<a class="button" href="https://github.com/xvshiting/macbeat/releases/download/v0.2.0/MacBeat-0.2.0-arm64.dmg">
+<a class="button" href="https://github.com/xvshiting/macbeat/releases/download/v0.3.0/MacBeat-0.3.0-arm64.dmg">
 <span aria-hidden="true">↓</span> 下载 Mac 版</a>
 <a class="text-link" href="https://github.com/xvshiting/macbeat">在 GitHub 查看 <span aria-hidden="true">↗</span>
 </a>
 </div>
-<p class="meta">v0.2.0 预发布版 · Apple 芯片 · 最低构建目标 macOS 13+</p>
+<p class="meta">v0.3.0 预发布版 · Apple 芯片 · 最低构建目标 macOS 13+</p>
 <p class="small">免费下载，无需账户，无需订阅。</p>
 </div>
 <div class="hero-visual">
@@ -318,7 +318,7 @@
 <aside class="notice">
 <div>
 <h3>第一次打开前</h3>
-<p>v0.2.0 使用 ad-hoc 签名，尚未经过 Apple 公证。macOS 可能阻止首次打开，请核对来源与校验值，再按安装说明处理。默认仅接电运行，电池使用需在设置中允许。</p>
+<p>v0.3.0 使用 ad-hoc 签名，尚未经过 Apple 公证。macOS 可能阻止首次打开，请核对来源与校验值，再按安装说明处理。默认仅接电运行，电池使用需在设置中允许。</p>
 </div>
 <a class="text-link" href="https://github.com/xvshiting/macbeat/blob/main/README.zh-CN.md#下载与安装">阅读安装说明 ↗</a>
 </aside>
@@ -326,11 +326,11 @@
 <section class="faq section wrap">
 <p class="eyebrow">你可能想知道</p>
 <div>
-<details><summary>可以每天自动开启和关闭吗？<span aria-hidden="true">+</span></summary><p>可以。在设置中开启“每日定时”，选择自动开启和关闭时间并保存，支持跨午夜。需要 MacBeat 正在运行，不能唤醒已休眠或关机的电脑。在尚未执行的时段内唤醒，会补开到结束时间；停止或失败后，本次时段不再重试。已有手动会话时，会跳过本次定时。</p></details>
+<details><summary>可以每天自动开启和关闭吗？<span aria-hidden="true">+</span></summary><p>可以。在“每日计划”的 24 小时圆盘中安排多个时段并保存，拖动弧段调整起止时间或整体移动，重叠时可预览合并。跨午夜可拆为 22:00–24:00 和 00:00–02:00 两段。需要 MacBeat 正在运行，不能唤醒已休眠或关机的电脑。在尚未执行的时段内唤醒，会补开到结束时间；停止或失败后，本次时段不再重试。已有手动会话时，会跳过本次定时。</p></details>
 <details>
 <summary>屏幕会一直亮着吗？<span aria-hidden="true">+</span>
 </summary>
-<p>不会。MacBeat 保持系统唤醒，屏幕仍可正常熄灭。屏幕变黑本身不代表任务已经停止。</p>
+<p>不会。MacBeat 保持系统唤醒，屏幕仍可正常熄灭。合盖会话默认自动锁屏，屏幕可熄灭，开盖后通过系统解锁；可在设置中关闭自动锁屏。屏幕变黑本身不代表任务已经停止。</p>
 </details>
 <details>
 <summary>所有 Mac 都能使用吗？<span aria-hidden="true">+</span>
@@ -340,7 +340,7 @@
 <details>
 <summary>会永久修改我的睡眠设置吗？<span aria-hidden="true">+</span>
 </summary>
-<p>MacBeat 不执行 pmset disablesleep，也不写入持久电源设置。会话使用临时请求，并配有辅助与恢复进程。合盖控制涉及共享系统状态，请避免同时运行多个合盖控制工具。</p>
+<p>普通会话使用临时请求，不修改持久电源设置。独立的“恢复正常睡眠”会请求管理员授权，恢复全局睡眠限制和被关闭的闲置睡眠计时。其他程序仍持有的请求会列出，直到对应程序自行释放。合盖控制涉及共享系统状态，请避免同时运行多个合盖控制工具。</p>
 </details>
 <details>
 <summary>到时间以后，电脑会立刻休眠吗？<span aria-hidden="true">+</span>
@@ -358,9 +358,9 @@
 <img src="assets/icon.png" alt="" width="72" height="72">
 <h2>一点心跳，<br>让事情继续。</h2>
 <p>让 Mac 把手头的事做完，你可以暂时离开。</p>
-<a class="button" href="https://github.com/xvshiting/macbeat/releases/download/v0.2.0/MacBeat-0.2.0-arm64.dmg">
+<a class="button" href="https://github.com/xvshiting/macbeat/releases/download/v0.3.0/MacBeat-0.3.0-arm64.dmg">
 <span aria-hidden="true">↓</span> 下载 Mac 版</a>
-<p class="meta">v0.2.0 预发布版 · Apple 芯片 · 最低构建目标 macOS 13+</p>
+<p class="meta">v0.3.0 预发布版 · Apple 芯片 · 最低构建目标 macOS 13+</p>
 </section>
 </main>
 <footer class="wrap">

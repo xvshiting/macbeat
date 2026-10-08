@@ -42,12 +42,12 @@
 </h1>
 <p class="lead">The download, the long calculation, the local server. Let your Mac finish what it started — even when you step away.</p>
 <div class="actions">
-<a class="button" href="https://github.com/xvshiting/macbeat/releases/download/v0.2.0/MacBeat-0.2.0-arm64.dmg">
+<a class="button" href="https://github.com/xvshiting/macbeat/releases/download/v0.3.0/MacBeat-0.3.0-arm64.dmg">
 <span aria-hidden="true">↓</span> Download for Mac</a>
 <a class="text-link" href="https://github.com/xvshiting/macbeat">View on GitHub <span aria-hidden="true">↗</span>
 </a>
 </div>
-<p class="meta">v0.2.0 prerelease · Apple silicon · macOS 13+ build target</p>
+<p class="meta">v0.3.0 prerelease · Apple silicon · macOS 13+ build target</p>
 <p class="small">Free download. No account. No subscription.</p>
 </div>
 <div class="hero-visual">
@@ -318,7 +318,7 @@
 <aside class="notice">
 <div>
 <h3>Before your first launch</h3>
-<p>v0.2.0 is ad-hoc signed and not Apple-notarized. macOS may block the first launch. Verify the release source and checksum, then follow the installation guide. AC-only operation is enabled by default.</p>
+<p>v0.3.0 is ad-hoc signed and not Apple-notarized. macOS may block the first launch. Verify the release source and checksum, then follow the installation guide. AC-only operation is enabled by default.</p>
 </div>
 <a class="text-link" href="https://github.com/xvshiting/macbeat/blob/main/README.md#download-and-install">Read the installation guide ↗</a>
 </aside>
@@ -326,11 +326,11 @@
 <section class="faq section wrap">
 <p class="eyebrow">A FEW GOOD QUESTIONS</p>
 <div>
-<details><summary>Can it start and stop automatically every day?<span aria-hidden="true">+</span></summary><p>Yes. Enable Daily schedule in Settings, choose local start and end times, and save. Overnight windows are supported. MacBeat must be running and cannot wake a sleeping or shut-down Mac. Waking within an unused window starts a session until the original end time. After a stop or failure, that window is not retried. Existing manual sessions take priority.</p></details>
+<details><summary>Can it start and stop automatically every day?<span aria-hidden="true">+</span></summary><p>Yes. Open Daily plan, arrange multiple windows on the 24-hour dial, and save. Move or resize arcs; overlaps offer a merge preview. For overnight work, use 22:00–24:00 and 00:00–02:00 windows. MacBeat must be running and cannot wake a sleeping or shut-down Mac. Waking within an unused window starts a session until the original end time. After a stop or failure, that window is not retried. Existing manual sessions take priority.</p></details>
 <details>
 <summary>Will my screen stay on?<span aria-hidden="true">+</span>
 </summary>
-<p>No. MacBeat keeps the system awake, but allows the display to turn off. A dark screen alone does not mean your tasks have stopped.</p>
+<p>No. MacBeat keeps the system awake, but allows the display to turn off. Lock on lid close is enabled by default during closed-lid sessions: the session locks, the display can turn off, and reopening shows the macOS unlock screen. You can turn this off in Settings. A dark screen alone does not mean your tasks have stopped.</p>
 </details>
 <details>
 <summary>Does it work on every Mac?<span aria-hidden="true">+</span>
@@ -340,7 +340,7 @@
 <details>
 <summary>Does it change my permanent sleep settings?<span aria-hidden="true">+</span>
 </summary>
-<p>MacBeat does not run pmset disablesleep or write persistent power settings. Sessions use temporary requests, with a helper and recovery process. Closed-lid control uses shared system state, so avoid running multiple lid-control utilities together.</p>
+<p>Ordinary sessions use temporary requests and do not change persistent power settings. The separate Restore normal sleep action asks for administrator authorization to reset global restrictions and disabled idle-sleep timers. Other apps’ live requests remain listed until they release them. Closed-lid control uses shared system state, so avoid running multiple lid-control utilities together.</p>
 </details>
 <details>
 <summary>What happens when the timer finishes?<span aria-hidden="true">+</span>
@@ -358,9 +358,9 @@
 <img src="assets/icon.png" alt="" width="72" height="72">
 <h2>A little heartbeat.<br>A little more done.</h2>
 <p>Let your Mac keep working. You can step away.</p>
-<a class="button" href="https://github.com/xvshiting/macbeat/releases/download/v0.2.0/MacBeat-0.2.0-arm64.dmg">
+<a class="button" href="https://github.com/xvshiting/macbeat/releases/download/v0.3.0/MacBeat-0.3.0-arm64.dmg">
 <span aria-hidden="true">↓</span> Download for Mac</a>
-<p class="meta">v0.2.0 prerelease · Apple silicon · macOS 13+ build target</p>
+<p class="meta">v0.3.0 prerelease · Apple silicon · macOS 13+ build target</p>
 </section>
 </main>
 <footer class="wrap">

@@ -1,4 +1,5 @@
 import XCTest
+import CoreGraphics
 @testable import MacBeatAgent
 
 final class LidLockMonitorTests: XCTestCase {
@@ -57,6 +58,11 @@ final class LidLockMonitorTests: XCTestCase {
     func testNativeInterfaceCanBeProbedWithoutLocking() {
         // No requestLock/turnOffDisplay call: this must not disrupt test runners.
         let control = ScreenLockControl()
-        XCTAssertNotNil(control.isLocked())
+        if CGSessionCopyCurrentDictionary() == nil {
+            // Hosted macOS runners may have no interactive login session.
+            XCTAssertNil(control.isLocked())
+        } else {
+            XCTAssertNotNil(control.isLocked())
+        }
     }
 }

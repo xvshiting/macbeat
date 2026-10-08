@@ -13,7 +13,7 @@
 <p align="center"><strong>English</strong> · <a href="README.zh-CN.md">简体中文</a></p>
 <p align="center">
   <a href="https://xvshiting.github.io/macbeat/"><strong>Website</strong></a> ·
-  <a href="https://github.com/xvshiting/macbeat/releases/tag/v0.2.0"><strong>Download DMG</strong></a> ·
+  <a href="https://github.com/xvshiting/macbeat/releases/tag/v0.3.0"><strong>Download DMG</strong></a> ·
   <a href="#getting-started">Getting started</a> ·
   <a href="#compatibility-and-real-world-testing">Compatibility</a> ·
   <a href="#build-from-source">Build from source</a>
@@ -22,6 +22,18 @@
 Keep downloads, computations, and local services running while you step away. Start a session, choose when it ends, and enable closed-lid operation when you need it. MacBeat lives in the menu bar; closing its panel does not stop your session.
 
 **Your Mac stays awake. Its display can still turn off.** MacBeat does not currently offer an always-on display mode. The native app's current interface is in Simplified Chinese; this README and the website are available in English and Chinese.
+
+## What’s new in v0.3.0
+
+- Set a duration on a 24-hour dial or enter an exact finish time.
+- Arrange multiple daily windows on a second dial; move or resize existing arcs and merge overlaps with confirmation.
+- Close the lid to lock your session while work continues. Reopen it and use the macOS unlock screen.
+- Inspect system sleep settings and use **Restore normal sleep** to reset global restrictions and identify remaining requests.
+
+<p align="center">
+  <img src="docs/images/session-v0.3.0.png" width="300" alt="Native duration dial with closed-lid locking enabled">
+  <img src="docs/images/daily-plan-v0.3.0.png" width="300" alt="Native daily plan dial with draggable schedule arcs">
+</p>
 
 ## Features
 
@@ -47,9 +59,9 @@ The menu bar icon uses a white heartbeat on a colored background: **blue** for s
 
 ## Download and install
 
-This branch contains the upcoming 0.3.0 interface and scheduling changes described above. The published download below is still 0.2.0; build from source to try the new features.
+The current release is **v0.3.0 (prerelease)**, with the native dial interface, multiple daily windows, sleep recovery, and default-on locking when the lid closes.
 
-1. Download `MacBeat-0.2.0-arm64.dmg` from [Releases](https://github.com/xvshiting/macbeat/releases/tag/v0.2.0).
+1. Download `MacBeat-0.3.0-arm64.dmg` from [Releases](https://github.com/xvshiting/macbeat/releases/tag/v0.3.0).
 2. Open the DMG and **drag MacBeat.app into Applications**.
 3. Open MacBeat from Applications. Find its heartbeat icon in the menu bar; it has no Dock icon.
 
@@ -64,7 +76,7 @@ Confirm that the file came from this repository's Release and verify its checksu
 Download the `.sha256` file from the same release, then run this in your download directory:
 
 ```sh
-shasum -a 256 -c MacBeat-0.2.0-arm64.dmg.sha256
+shasum -a 256 -c MacBeat-0.3.0-arm64.dmg.sha256
 ```
 
 To update, stop your session and quit the old version before replacing the app. Start a new session after reopening it.
@@ -101,7 +113,9 @@ A black display does not mean the computer is asleep. Check task progress, conti
 
 ## Compatibility and real-world testing
 
-**One physical closed-lid test has been completed:** on October 5, 2026, an Apple silicon MacBook Pro running macOS 27.0 (26A428), on battery power, kept running with the lid closed for approximately **8 minutes 8 seconds**. An independent observer continued recording every second, detected **0 seconds of sleep**, and system logs showed no sleep event during that interval.
+**Continued operation was physically verified:** on October 5, 2026, an Apple silicon MacBook Pro running macOS 27.0 (26A428), on battery power, kept running with the lid closed for approximately **8 minutes 8 seconds**. An independent observer continued recording every second, detected **0 seconds of sleep**, and system logs showed no sleep event during that interval.
+
+On **October 8, 2026**, the same MacBook Pro also passed a short closed-lid lock/unlock check on AC power: the session was observed locked with the lid closed, keep-awake remained active after reopening, and the user confirmed that the macOS unlock screen appeared before returning to the desktop. This was a separate functional check, not another timed endurance measurement.
 
 This verifies that particular machine and configuration. **Other Macs, OS versions, external-display configurations, and power transitions have not all been verified.** No prebuilt Intel binary is currently published.
 
@@ -118,10 +132,11 @@ python3 scripts/observe-lid.py --seconds 300 --output /tmp/macbeat-lid-test.json
 Close the lid for two minutes, then reopen it. The observer does not acquire any keep-awake assertions or change power settings. Its log includes:
 
 - `lidClosed`: whether the lid was closed.
+- `screenLocked`: whether the macOS session reports a locked screen; `null` means unavailable.
 - `gap`: interval since the previous record; normally about one second.
 - `sleepSeconds`: estimated cumulative sleep, calculated from the difference between macOS continuous and uptime clocks.
 
-Look for a confirmed closed lid, uninterrupted observations, and no increase in sleep time. A successful API call or an active-session label alone does not prove continued operation. Choose an output path that does not already exist to avoid overwriting earlier observations.
+Look for a confirmed closed lid, uninterrupted observations, and no increase in sleep time. With locking enabled, also check `screenLocked` and confirm that reopening requires system unlock. A successful API call or an active-session label alone does not prove continued operation. Choose an output path that does not already exist to avoid overwriting earlier observations.
 
 ## Implementation and recovery
 
