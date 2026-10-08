@@ -75,7 +75,7 @@ struct NormalSleepRestorer {
         }
         do { try stopOwned(); report.completed.append("MacBeat 会话与恢复记录已处理。") }
         catch { report.errors.append(error.localizedDescription); return report }
-        do { try releaseClamshell(); report.completed.append("已请求解除合盖保持。") }
+        do { try releaseClamshell(); report.sharedHoldReleased = true; report.completed.append("已请求解除合盖保持。") }
         catch { report.errors.append(error.localizedDescription) }
         return report
     }

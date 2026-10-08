@@ -157,7 +157,7 @@ The DMG and SHA-256 file are written to `dist/`. Packaging uses a separate stagi
 conda run -n kora swift test
 ```
 
-There are 63 policy, scheduling, controller, and recovery-store tests, including legacy migration, multiple daily windows, midnight handoff, overlap merging, arc movement, daylight-saving transitions, stop suppression, lock ownership, token-matched cooperative stop requests, authorization cancellation, partial reset failures, and actual assertion inspection.
+There are 65 policy, scheduling, controller, and recovery-store tests, including legacy migration, multiple daily windows, midnight handoff, overlap merging, arc movement, daylight-saving transitions, stop suppression, lock ownership, token-matched cooperative stop requests, authorization cancellation, partial reset failures, and actual assertion inspection.
 
 The following integration checks briefly acquire real power assertions. Stop any MacBeat session and keep the lid open before running them:
 

@@ -18,6 +18,7 @@ final class NormalSleepControllerTests: XCTestCase {
         model.tick()
         XCTAssertFalse(model.running); XCTAssertNotNil(model.sleepRestoreReport)
         XCTAssertTrue(completed)
+        XCTAssertFalse(model.shouldOfferNormalSleepRestore)
     }
     @MainActor func testPreviewRestoreDoesNotEraseOtherApplicationsBlockers() {
         let model = SessionController(preview: true, automaticTicks: false)
@@ -25,5 +26,6 @@ final class NormalSleepControllerTests: XCTestCase {
         model.restore(.normalSleep)
         XCTAssertEqual(model.keepAwake.blockers?.count, 1)
         XCTAssertEqual(model.sleepRestoreReport?.summary(status: model.keepAwake), "已执行恢复，仍有阻止休眠的状态。")
+        XCTAssertFalse(model.shouldOfferNormalSleepRestore)
     }
 }

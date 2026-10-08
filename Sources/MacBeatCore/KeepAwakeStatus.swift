@@ -36,18 +36,29 @@ public struct SleepRestoreReport: Codable, Equatable {
     public var completed: [String]
     public var errors: [String]
     public var cancelled: Bool
-    public init(completed: [String] = [], errors: [String] = [], cancelled: Bool = false) {
+    /// API acknowledgement for releasing the shared hold. The registry's
+    /// aggregate lid policy may remain cached while the lid is open.
+    public var sharedHoldReleased: Bool?
+    public init(completed: [String] = [], errors: [String] = [], cancelled: Bool = false, sharedHoldReleased: Bool? = nil) {
         self.completed = completed; self.errors = errors; self.cancelled = cancelled
+        self.sharedHoldReleased = sharedHoldReleased
+    }
+    public func shouldOfferRestore(status: KeepAwakeStatus) -> Bool {
+        if cancelled || !errors.isEmpty || sharedHoldReleased != true { return true }
+        // Repeating reset cannot release another app's live assertions or
+        // override desktop/display policy. Only offer it for resettable state.
+        return status.agentActive || status.recoveryRecord || status.globalSleepDisabled != false || status.idleSleepDisabledProfiles?.isEmpty != true
     }
     public func summary(status: KeepAwakeStatus) -> String {
         if cancelled { return "已取消系统授权，未执行恢复。" }
         if !errors.isEmpty { return "恢复尚未完成，请查看下方结果。" }
-        if status.agentActive || status.recoveryRecord || status.globalSleepDisabled == true || status.idleSleepDisabledProfiles?.isEmpty == false || status.clamshellBlocked == true || status.blockers?.contains(where: { !$0.waitsForDisplayOff }) == true {
+        if status.agentActive || status.recoveryRecord || status.globalSleepDisabled == true || status.idleSleepDisabledProfiles?.isEmpty == false || (status.clamshellBlocked == true && sharedHoldReleased != true) || status.blockers?.contains(where: { !$0.waitsForDisplayOff }) == true {
             return "已执行恢复，仍有阻止休眠的状态。"
         }
         if status.globalSleepDisabled == nil || status.clamshellBlocked == nil || status.blockers == nil || status.idleSleepDisabledProfiles == nil {
             return "已执行恢复，部分系统状态尚无法确认。"
         }
+        if status.clamshellBlocked == true { return "睡眠设置已恢复，合盖行为仍取决于系统当前条件。" }
         if status.blockers?.contains(where: \.waitsForDisplayOff) == true { return "已恢复睡眠设置，系统正在等待屏幕熄灭。" }
         return "已恢复睡眠设置，未检测到持续防休眠请求。"
     }

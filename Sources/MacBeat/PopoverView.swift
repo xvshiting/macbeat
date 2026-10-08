@@ -217,15 +217,21 @@ struct PopoverView: View {
                 }
             }.frame(maxWidth: .infinity, alignment: .leading).beatCard()
             VStack(alignment: .leading, spacing: 10) {
-                HStack { Text("恢复正常睡眠").font(.system(size: 13, weight: .semibold)); Spacer(); Image(systemName: "moon.zzz").foregroundStyle(BeatStyle.blue) }
-                Text("结束 MacBeat 保持，关闭全局禁用睡眠，解除合盖保持。").font(.system(size: 10)).foregroundStyle(BeatStyle.muted)
-                detail("laptopcomputer", "合盖休眠", model.keepAwake.clamshellBlocked.map { $0 ? "当前受阻止" : "未受阻止" } ?? "未知")
+                HStack { Text(model.shouldOfferNormalSleepRestore ? "恢复正常睡眠" : "睡眠设置已恢复").font(.system(size: 13, weight: .semibold)); Spacer(); Image(systemName: model.shouldOfferNormalSleepRestore ? "moon.zzz" : "checkmark.circle").foregroundStyle(BeatStyle.blue) }
+                if model.shouldOfferNormalSleepRestore {
+                    Text("结束 MacBeat 保持，关闭全局禁用睡眠，解除合盖保持。").font(.system(size: 10)).foregroundStyle(BeatStyle.muted)
+                }
+                detail("laptopcomputer", "合盖休眠", model.sleepRestoreReport?.sharedHoldReleased == true ? "已请求解除 · 待合盖验证" : model.keepAwake.clamshellBlocked.map { $0 ? "系统当前策略不触发" : "系统策略允许" } ?? "未知")
                 if model.keepAwake.idleSleepDisabledProfiles?.isEmpty == false {
                     Text("系统自动睡眠已关闭；恢复后将设为闲置 10 分钟。").font(.system(size: 10)).foregroundStyle(.orange)
                 }
-                BeatPrimary(title: model.restoringNormalSleep ? "正在恢复…" : "恢复正常睡眠", symbol: "moon.zzz", disabled: model.busy) { model.recoveryConfirmation = .normalSleep }
+                if model.shouldOfferNormalSleepRestore {
+                    BeatPrimary(title: model.restoringNormalSleep ? "正在恢复…" : "恢复正常睡眠", symbol: "moon.zzz", disabled: model.busy) { model.recoveryConfirmation = .normalSleep }
+                } else {
+                    Text("无需重复恢复。实际合盖休眠仍受外接设备和系统条件影响。").font(.system(size: 10)).foregroundStyle(BeatStyle.muted)
+                }
             }.beatCard()
-            if let blockers = model.keepAwake.blockers, !blockers.isEmpty {
+            if let blockers = model.keepAwake.blockers?.filter({ !$0.waitsForDisplayOff }), !blockers.isEmpty {
                 VStack(alignment: .leading, spacing: 10) {
                     Text("当前防休眠请求").font(.system(size: 13, weight: .semibold))
                     ForEach(Array(Set(blockers.map(\.processName))).sorted(), id: \.self) { name in
@@ -235,6 +241,9 @@ struct PopoverView: View {
                 }.frame(maxWidth: .infinity, alignment: .leading).beatCard()
             } else if model.keepAwake.blockers == nil {
                 Text("暂未读取到程序的防休眠请求，请重新检测。").font(.system(size: 10)).foregroundStyle(BeatStyle.muted)
+            }
+            if model.keepAwake.blockers?.contains(where: \.waitsForDisplayOff) == true {
+                Text("屏幕亮起时，系统会暂时阻止自动休眠；屏幕熄灭后会重新判断。这不是软件留下的禁用睡眠设置。").font(.system(size: 10)).foregroundStyle(BeatStyle.muted)
             }
             if let report = model.sleepRestoreReport {
                 VStack(alignment: .leading, spacing: 9) {

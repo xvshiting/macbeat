@@ -235,7 +235,7 @@ import MacBeatCore
             keepAwake.recoveryRecord = false; keepAwake.agentActive = false
             keepAwake.globalSleepDisabled = false; keepAwake.clamshellBlocked = false
             keepAwake.idleSleepDisabledProfiles = []; keepAwake.blockers = keepAwake.blockers ?? []
-            finishSleepRestore(SleepRestoreReport(completed: ["界面预览，未修改系统状态。"]), previouslyPaused: previouslyPaused)
+            finishSleepRestore(SleepRestoreReport(completed: ["界面预览，未修改系统状态。"], sharedHoldReleased: true), previouslyPaused: previouslyPaused)
             return
         }
         // The helper cooperatively stops the current agent after system
@@ -251,6 +251,9 @@ import MacBeatCore
             }
             self.inspect()
         }
+    }
+    var shouldOfferNormalSleepRestore: Bool {
+        restoringNormalSleep || sleepRestoreReport?.shouldOfferRestore(status: keepAwake) != false
     }
     private func finishSleepRestore(_ report: SleepRestoreReport, previouslyPaused: Bool) {
         if !report.cancelled {
