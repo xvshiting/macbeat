@@ -32,6 +32,37 @@ base = Timebase()
 lib.mach_timebase_info(ctypes.byref(base))
 scale = base.numer / base.denom / 1e9
 
+# Inspect session state without requesting lock, display sleep, or power holds.
+cg = ctypes.CDLL('/System/Library/Frameworks/CoreGraphics.framework/CoreGraphics')
+cf = ctypes.CDLL('/System/Library/Frameworks/CoreFoundation.framework/CoreFoundation')
+cg.CGSessionCopyCurrentDictionary.restype = ctypes.c_void_p
+cf.CFStringCreateWithCString.argtypes = [ctypes.c_void_p, ctypes.c_char_p, ctypes.c_uint32]
+cf.CFStringCreateWithCString.restype = ctypes.c_void_p
+cf.CFDictionaryGetValue.argtypes = [ctypes.c_void_p, ctypes.c_void_p]
+cf.CFDictionaryGetValue.restype = ctypes.c_void_p
+cf.CFGetTypeID.argtypes = [ctypes.c_void_p]
+cf.CFGetTypeID.restype = ctypes.c_ulong
+cf.CFBooleanGetTypeID.restype = ctypes.c_ulong
+cf.CFBooleanGetValue.argtypes = [ctypes.c_void_p]
+cf.CFBooleanGetValue.restype = ctypes.c_bool
+cf.CFRelease.argtypes = [ctypes.c_void_p]
+lock_key = cf.CFStringCreateWithCString(None, b'CGSSessionScreenIsLocked', 0x08000100)
+
+
+def locked():
+    session = cg.CGSessionCopyCurrentDictionary()
+    if not session:
+        return None
+    try:
+        value = cf.CFDictionaryGetValue(session, lock_key)
+        if not value:
+            return False
+        if cf.CFGetTypeID(value) != cf.CFBooleanGetTypeID():
+            return None
+        return cf.CFBooleanGetValue(value)
+    finally:
+        cf.CFRelease(session)
+
 
 def clocks():
     return lib.mach_continuous_time() * scale, lib.mach_absolute_time() * scale
@@ -45,6 +76,7 @@ with args.output.open('x', buffering=1) as log:
     while True:
         continuous, awake = clocks()
         record = dict(time=datetime.datetime.now().astimezone().isoformat(timespec='seconds'),
+                      screenLocked=locked(),
                       elapsed=round(continuous-start, 3),
                       gap=round(continuous-previous, 3),
                       sleepSeconds=round(max(0, (continuous-start)-(awake-awake_start)), 3))

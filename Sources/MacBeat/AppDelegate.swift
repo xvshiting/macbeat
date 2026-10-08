@@ -25,7 +25,7 @@ import SwiftUI
             if self.model.active { self.model.stop(); return }
             NSApplication.shared.reply(toApplicationShouldTerminate: true)
         }
-        if preview || CommandLine.arguments.contains("--show-window") {
+        if preview || CommandLine.arguments.contains("--show-window") || Bundle.main.object(forInfoDictionaryKey: "MacBeatShowWindow") as? Bool == true {
             let controller = NSHostingController(rootView: PopoverView(model: model))
             let window = NSWindow(contentViewController: controller)
             window.title = preview ? "MacBeat · 界面预览" : "MacBeat"

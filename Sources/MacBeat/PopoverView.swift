@@ -82,6 +82,9 @@ struct PopoverView: View {
             VStack(spacing: 13) {
                 detail("laptopcomputer", "合盖保持运行", model.clamshellStatus)
                 detail("powerplug", "电源状态", model.powerText)
+                if model.clamshell && model.lockOnLidClose {
+                    detail("lock", "合盖自动锁屏", model.lockNotice.isEmpty ? "合盖后锁屏 · 允许熄屏" : model.lockNotice)
+                }
             }
             BeatPrimary(title: model.busy ? "请稍候…" : model.running ? "停止保持运行" : model.needsRecovery ? "查看恢复状态" : "开启保持运行", disabled: model.busy || (!model.running && !model.needsRecovery && model.validation != nil)) {
                 if model.running { model.stop() }
@@ -272,7 +275,9 @@ struct PopoverView: View {
                 HStack { Text("低电量停止阈值"); Spacer(); Picker("低电量阈值", selection: $model.batteryThreshold) { ForEach([10,15,20,30], id: \.self) { Text("\($0)%").tag($0) } }.labelsHidden().frame(width: 80) }
                 Toggle("合盖时保持运行", isOn: $model.clamshell)
                 Text("关闭后只阻止空闲休眠，合盖仍会休眠。屏幕可以正常熄灭。").font(.system(size: 10)).foregroundStyle(BeatStyle.muted)
-            }.disabled(model.active).onChange(of: model.powerOnly) { _ in model.saveSettings() }.onChange(of: model.clamshell) { _ in model.saveSettings() }.onChange(of: model.batteryThreshold) { _ in model.saveSettings() }
+                Toggle("合盖时自动锁屏", isOn: $model.lockOnLidClose).disabled(!model.clamshell)
+                Text("保持运行期间，合盖后锁屏并请求熄屏；开盖后通过系统解锁。不会修改密码设置。").font(.system(size: 10)).foregroundStyle(BeatStyle.muted)
+            }.disabled(model.active).onChange(of: model.powerOnly) { _ in model.saveSettings() }.onChange(of: model.clamshell) { _ in model.saveSettings() }.onChange(of: model.batteryThreshold) { _ in model.saveSettings() }.onChange(of: model.lockOnLidClose) { _ in model.saveSettings() }
             if model.active { Text("停止当前运行后可修改运行条件。").font(.system(size: 10)).foregroundStyle(BeatStyle.muted) }
             Divider()
             Toggle("登录时启动 MacBeat", isOn: Binding(get: { model.loginEnabled }, set: { model.setLogin($0) }))

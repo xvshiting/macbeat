@@ -18,13 +18,29 @@ public struct SessionPlan: Codable, Equatable {
     public var powerOnly: Bool
     public var batteryThreshold: Int
     public var requestClamshell: Bool
+    public var lockOnLidClose: Bool
 
     public init(mode: EndMode = .duration, duration: TimeInterval = 7200,
                 deadline: Date = Date().addingTimeInterval(7200), powerOnly: Bool = true,
-                batteryThreshold: Int = 20, requestClamshell: Bool = true) {
+                batteryThreshold: Int = 20, requestClamshell: Bool = true, lockOnLidClose: Bool = false) {
         self.mode = mode; self.duration = duration; self.deadline = deadline
         self.powerOnly = powerOnly; self.batteryThreshold = batteryThreshold
         self.requestClamshell = requestClamshell
+        self.lockOnLidClose = lockOnLidClose
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case mode, duration, deadline, powerOnly, batteryThreshold, requestClamshell, lockOnLidClose
+    }
+    public init(from decoder: Decoder) throws {
+        let values = try decoder.container(keyedBy: CodingKeys.self)
+        mode = try values.decode(EndMode.self, forKey: .mode)
+        duration = try values.decode(TimeInterval.self, forKey: .duration)
+        deadline = try values.decode(Date.self, forKey: .deadline)
+        powerOnly = try values.decode(Bool.self, forKey: .powerOnly)
+        batteryThreshold = try values.decode(Int.self, forKey: .batteryThreshold)
+        requestClamshell = try values.decode(Bool.self, forKey: .requestClamshell)
+        lockOnLidClose = try values.decodeIfPresent(Bool.self, forKey: .lockOnLidClose) ?? false
     }
 
     public func endDate(now: Date) throws -> Date? {

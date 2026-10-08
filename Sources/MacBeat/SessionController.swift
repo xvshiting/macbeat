@@ -10,6 +10,8 @@ import MacBeatCore
     @Published var powerOnly: Bool
     @Published var batteryThreshold: Int
     @Published var clamshell: Bool
+    @Published var lockOnLidClose: Bool
+    @Published var lockNotice = ""
     @Published var dailySchedule: DailySchedule
     @Published private(set) var savedDailySchedule: DailySchedule
     @Published private(set) var scheduledSession = false
@@ -57,7 +59,8 @@ import MacBeatCore
     var active: Bool { running || busy }
     var plan: SessionPlan {
         SessionPlan(mode: mode, duration: duration, deadline: deadline,
-                    powerOnly: powerOnly, batteryThreshold: batteryThreshold, requestClamshell: clamshell)
+                    powerOnly: powerOnly, batteryThreshold: batteryThreshold, requestClamshell: clamshell,
+                    lockOnLidClose: lockOnLidClose)
     }
     var validation: String? {
         do { _ = try plan.endDate(now: now); return nil }
@@ -104,6 +107,7 @@ import MacBeatCore
         powerOnly = settings.object(forKey: "powerOnly") as? Bool ?? true
         batteryThreshold = settings.object(forKey: "batteryThreshold") as? Int ?? 20
         clamshell = settings.object(forKey: "clamshell") as? Bool ?? true
+        lockOnLidClose = settings.object(forKey: "lockOnLidClose") as? Bool ?? false
         let originalScheduleData = settings.data(forKey: "dailySchedule")
         let schedule = originalScheduleData.flatMap { try? JSONDecoder().decode(DailySchedule.self, from: $0) } ?? DailySchedule()
         dailySchedule = schedule
@@ -150,6 +154,7 @@ import MacBeatCore
         saveSettings()
         scheduledSession = scheduled
         message = ""; phase = "starting"; receivedStop = false; closedSeconds = 0
+        lockNotice = ""
         if preview {
             appliedPlan = sessionPlan; end = try? sessionPlan.endDate(now: now); phase = "running"
             requestedClamshell = sessionPlan.requestClamshell; message = "界面预览，没有修改系统状态。"; return
@@ -290,6 +295,7 @@ import MacBeatCore
             case "status":
                 end = event.end; closedSeconds = event.closedSeconds ?? 0
             case "notice": message = event.message
+            case "lockState": lockNotice = event.message
             case "error":
                 if phase == "starting" {
                     phase = "startFailed"
@@ -303,6 +309,7 @@ import MacBeatCore
                 receivedStop = true
                 if !startFailed { phase = "idle" }
                 end = nil; scheduledSession = false; updating = false; pendingPlan = nil
+                lockNotice = ""
                 if !startFailed { message = event.message }
                 safeToQuit?()
             default: break
@@ -343,6 +350,7 @@ import MacBeatCore
         defaults.set(powerOnly, forKey: "powerOnly")
         defaults.set(batteryThreshold, forKey: "batteryThreshold")
         defaults.set(clamshell, forKey: "clamshell")
+        defaults.set(lockOnLidClose, forKey: "lockOnLidClose")
     }
     var scheduleValidation: String? {
         !dailySchedule.isValid ? "请使用当天 00:00–24:00 的有效时段，并合并重叠时段。" : nil
@@ -394,7 +402,7 @@ import MacBeatCore
         now = date
         let scheduledPlan = SessionPlan(mode: .deadline, deadline: window.end,
                                         powerOnly: powerOnly, batteryThreshold: batteryThreshold,
-                                        requestClamshell: clamshell)
+                                        requestClamshell: clamshell, lockOnLidClose: lockOnLidClose)
         // Production uses the agent's fresh power reading, not the last idle
         // snapshot (which may predate sleep). Preview simulates that same policy.
         if preview, let power, let reason = SessionPolicy.stopReason(plan: scheduledPlan, end: window.end,

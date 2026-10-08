@@ -29,6 +29,7 @@ Keep downloads, computations, and local services running while you step away. St
 | --- | --- |
 | Keep awake with the lid open | Prevents automatic idle sleep |
 | Optional closed-lid operation | Requests continued operation when you close your MacBook |
+| Lock on lid close | Opt in to lock the macOS session and request display sleep while tasks keep running |
 | Duration | A 24-hour dial, exact hour/minute entry, and one-minute adjustment |
 | Exact end time | Choose a local date and time, including the next day |
 | Manual stop | Continue until you stop the session or a protection condition is reached |
@@ -37,6 +38,8 @@ Keep downloads, computations, and local services running while you step away. St
 | Daily schedule | Multiple same-day windows on a 24-hour dial, with drag editing and overlap merging |
 | Restore normal sleep | End MacBeat keep-awake, reset global sleep restrictions, and show remaining blockers |
 | Launch at login | Starts in standby, or checks the current window if you enabled a daily schedule |
+
+**Lock on lid close** is off by default. Enable it in Settings together with closed-lid operation before starting a session. Manual sessions and daily windows both use it. MacBeat checks that the login framework lock entry point is available, then confirms the session is locked before requesting display sleep. It does not change the password delay, log out, or unlock your Mac. The lock API and status key are private macOS interfaces and need real-device verification after OS updates. Unsupported interfaces fail startup explicitly; an unconfirmed lock is reported while keep-awake continues. The runtime-binding approach is also used by [MacLock](https://github.com/yumaitau/MacLock/blob/main/MacLock/ScreenLocker.swift).
 
 The menu bar icon uses a white heartbeat on a colored background: **blue** for standby, **green** for an active session, and **amber** when attention is needed. It stays visible on light and dark menu bars.
 
@@ -157,7 +160,7 @@ The DMG and SHA-256 file are written to `dist/`. Packaging uses a separate stagi
 conda run -n kora swift test
 ```
 
-There are 65 policy, scheduling, controller, and recovery-store tests, including legacy migration, multiple daily windows, midnight handoff, overlap merging, arc movement, daylight-saving transitions, stop suppression, lock ownership, token-matched cooperative stop requests, authorization cancellation, partial reset failures, and actual assertion inspection.
+There are 73 policy, scheduling, controller, and recovery-store tests, including legacy migration, multiple daily windows, midnight handoff, overlap merging, arc movement, daylight-saving transitions, stop suppression, lock ownership, token-matched cooperative stop requests, authorization cancellation, partial reset failures, and actual assertion inspection.
 
 The following integration checks briefly acquire real power assertions. Stop any MacBeat session and keep the lid open before running them:
 

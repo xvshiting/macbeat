@@ -3,6 +3,10 @@ import Darwin
 import MacBeatCore
 
 let engine = PowerControl()
+let screenLock = ScreenLockControl(displayError: { message in
+    DispatchQueue.main.async { emit(AgentEvent("lockState", message: message)) }
+})
+let lidLock = LidLockMonitor(control: screenLock)
 var plan: SessionPlan?
 var end: Date?
 var monotonicEnd: TimeInterval?
@@ -52,10 +56,14 @@ func handle(_ command: AgentCommand) {
             throw PowerError(message: reason.rawValue)
         }
         if command.action == "start", plan == nil {
+            if proposed.lockOnLidClose && proposed.requestClamshell && !screenLock.available {
+                throw PowerError(message: "此系统无法自动锁屏，请关闭合盖时自动锁屏后重试。")
+            }
             try engine.start(clamshell: proposed.requestClamshell)
             sleepOffset = sleepClockOffset()
         } else if command.action == "update", let current = plan {
-            guard current.requestClamshell == proposed.requestClamshell else {
+            guard current.requestClamshell == proposed.requestClamshell,
+                  current.lockOnLidClose == proposed.lockOnLidClose else {
                 throw PowerError(message: "请停止后再改变合盖控制方式。")
             }
         } else { throw PowerError(message: "当前状态不接受此请求。") }
@@ -193,6 +201,10 @@ timer.setEventHandler {
         emit(AgentEvent("notice", message: "系统曾休眠，现已继续防止空闲休眠。此模式不会阻止合盖休眠。", power: power))
     }
     let uptime = ProcessInfo.processInfo.systemUptime
+    if let state = lidLock.tick(lidClosed: power.lidClosed,
+                               enabled: plan.requestClamshell && plan.lockOnLidClose, uptime: uptime) {
+        emit(AgentEvent("lockState", message: state))
+    }
     if power.lidClosed == true { if closedSince == nil { closedSince = uptime } }
     else { closedSince = nil }
     emit(AgentEvent("status", end: end, power: power, clamshellRequested: engine.requestedClamshell,

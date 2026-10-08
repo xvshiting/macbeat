@@ -21,6 +21,7 @@ final class DailyScheduleControllerTests: XCTestCase {
         NSTimeZone.default = calendar.timeZone
         defer { NSTimeZone.default = originalZone }
         let model = model()
+        model.lockOnLidClose = true
         enable(model, at: date("2026-10-07T08:59:00+08:00"))
         XCTAssertFalse(model.running)
         model.evaluateDailySchedule(at: date("2026-10-07T09:00:00+08:00"), calendar: calendar)
@@ -28,6 +29,7 @@ final class DailyScheduleControllerTests: XCTestCase {
         XCTAssertTrue(model.scheduledSession)
         XCTAssertEqual(model.end, date("2026-10-07T18:00:00+08:00"))
         XCTAssertEqual(model.appliedPlan?.mode, .deadline)
+        XCTAssertEqual(model.appliedPlan?.lockOnLidClose, true)
         model.tick(at: date("2026-10-07T18:00:00+08:00"))
         XCTAssertFalse(model.active)
     }
