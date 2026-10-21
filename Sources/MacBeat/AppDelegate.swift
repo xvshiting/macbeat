@@ -69,11 +69,12 @@ import SwiftUI
         return true
     }
     func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
+        model.disconnectWakeScheduler()
         if model.preview { return .terminateNow }
         guard model.active || model.phase == "error" else { return .terminateNow }
         quitting = true
         model.schedulingPaused = true
-        if model.restoringNormalSleep { return .terminateLater }
+        if model.restoringNormalSleep || model.savingSchedule { return .terminateLater }
         model.stop()
         return .terminateLater
     }

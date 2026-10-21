@@ -146,3 +146,15 @@ v0.3.0 原生界面与多时段（2026-10-08）
 - 已处理全局/自动睡眠设置及 MacBeat 会话后收起恢复按钮；真正出现可重置状态、失败或取消时保留。
 - 屏幕亮起时 powerd 的临时保持独立说明，不放入需要退出的程序列表。
 - 回归测试先复现原误报，再验证报告、按钮条件及其他软件残留仍被正确提示。
+
+
+0.4.0 开发版：定时唤醒
+- DailySchedule.wakeComputer 默认关闭，旧数据保持关闭。
+- MacBeatWakeService 只调用 IOPMSchedulePowerEvent / IOPMCancelScheduledPowerEvent，类型固定 wake。
+- 管理 dev.macbeat.scheduled-wake.<uid> 标记的一次性事件，不使用 repeat/cancelall，不更改其他电源设置。
+- 每个已认证 XPC 连接一个租约；只维护下一时段，10 秒刷新跨日、时区或时钟变化；应用唤醒后立即评估原计划。
+- 第一次开启通过 macOS 管理员授权安装到 /Library/PrivilegedHelperTools 与 /Library/LaunchDaemons。现代 SMAppService 的 LaunchDaemon 要求公证，因此未公证构建采用受管理员授权保护的 launchd 安装方式。
+- 授权应用的 designated requirement 保存为 root 所有的配置，XPC 对调用进程验证签名；不能仅伪造 Bundle ID。服务不接受命令、任意路径或用户 ID，uid 来自连接本身，输入最多 48 个有效时段、16 KiB。
+- 关闭计划等待撤销成功再提交；退出/崩溃通过连接失效撤销，失败不会重新排期，会重试清理。服务启动时清理自己的残留预约。
+- 管理员授权取消则不提交草稿；无后台自动授权弹窗。更新代码签名可能要求重新授权安装。
+- 唤醒不是开机或解锁；MacBeat 需在已登录的会话中运行。物理 RTC 唤醒与盒盖兼容性必须单独验收。

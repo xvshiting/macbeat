@@ -1,6 +1,6 @@
 import Foundation
 
-public struct DailyPeriod: Codable, Equatable, Identifiable {
+public struct DailyPeriod: Codable, Equatable, Identifiable, Sendable {
     public var id: UUID
     public var startMinute: Int
     public var endMinute: Int
@@ -13,30 +13,36 @@ public struct DailyPeriod: Codable, Equatable, Identifiable {
 }
 
 /// Same-day local wall-clock windows. 1440 means the next local midnight, not 24 elapsed hours.
-public struct DailySchedule: Codable, Equatable {
+public struct DailySchedule: Codable, Equatable, Sendable {
     public var enabled: Bool
     public var periods: [DailyPeriod]
+    public var wakeComputer: Bool
     public init(enabled: Bool = false, startMinute: Int = 540, endMinute: Int = 1080) {
         self.enabled = enabled
+        self.wakeComputer = false
         self.periods = Self.legacyPeriods(start: startMinute, end: endMinute)
     }
-    public init(enabled: Bool, periods: [DailyPeriod]) { self.enabled = enabled; self.periods = periods }
+    public init(enabled: Bool, periods: [DailyPeriod], wakeComputer: Bool = false) {
+        self.enabled = enabled; self.periods = periods; self.wakeComputer = wakeComputer
+    }
     private static func legacyPeriods(start: Int, end: Int) -> [DailyPeriod] {
         if (0..<1440).contains(start), (0..<1440).contains(end), end < start {
             return (end > 0 ? [DailyPeriod(startMinute: 0, endMinute: end)] : []) + [DailyPeriod(startMinute: start, endMinute: 1440)]
         }
         return [DailyPeriod(startMinute: start, endMinute: end)]
     }
-    private enum CodingKeys: String, CodingKey { case enabled, periods, startMinute, endMinute }
+    private enum CodingKeys: String, CodingKey { case enabled, periods, startMinute, endMinute, wakeComputer }
     public init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
         enabled = try c.decode(Bool.self, forKey: .enabled)
+        wakeComputer = try c.decodeIfPresent(Bool.self, forKey: .wakeComputer) ?? false
         if let values = try c.decodeIfPresent([DailyPeriod].self, forKey: .periods) { periods = values }
         else { periods = Self.legacyPeriods(start: try c.decode(Int.self, forKey: .startMinute), end: try c.decode(Int.self, forKey: .endMinute)) }
     }
     public func encode(to encoder: Encoder) throws {
         var c = encoder.container(keyedBy: CodingKeys.self)
         try c.encode(enabled, forKey: .enabled); try c.encode(periods, forKey: .periods)
+        try c.encode(wakeComputer, forKey: .wakeComputer)
     }
     public var isValid: Bool {
         guard periods.allSatisfy(\.isValid), Set(periods.map(\.id)).count == periods.count else { return false }

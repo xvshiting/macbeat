@@ -6,12 +6,14 @@ let package = Package(
     platforms: [.macOS(.v13)],
     products: [
         .executable(name: "MacBeat", targets: ["MacBeat"]),
-        .executable(name: "MacBeatAgent", targets: ["MacBeatAgent"])
+        .executable(name: "MacBeatAgent", targets: ["MacBeatAgent"]),
+        .executable(name: "MacBeatWakeService", targets: ["MacBeatWakeService"])
     ],
     targets: [
         .target(name: "MacBeatCore"),
         .executableTarget(name: "MacBeat", dependencies: ["MacBeatCore"]),
         .executableTarget(name: "MacBeatAgent", dependencies: ["MacBeatCore"]),
+        .executableTarget(name: "MacBeatWakeService", dependencies: ["MacBeatCore"]),
         .testTarget(name: "MacBeatCoreTests", dependencies: ["MacBeatCore"]),
         .testTarget(name: "MacBeatTests", dependencies: ["MacBeat", "MacBeatCore"]),
         .testTarget(name: "MacBeatAgentTests", dependencies: ["MacBeatAgent"])

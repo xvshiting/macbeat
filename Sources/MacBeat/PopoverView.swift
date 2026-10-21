@@ -282,7 +282,7 @@ struct PopoverView: View {
             Divider()
             Toggle("登录时启动 MacBeat", isOn: Binding(get: { model.loginEnabled }, set: { model.setLogin($0) }))
             if !model.loginNotice.isEmpty { Text(model.loginNotice).font(.system(size: 10)).foregroundStyle(.orange) }
-            Text("每日计划需要 MacBeat 在运行，不会唤醒已休眠或关机的电脑。在时段内唤醒后会运行至该时段结束。").font(.system(size: 10)).foregroundStyle(BeatStyle.muted)
+            Text("每日计划需要 MacBeat 保持运行。可在每日计划中开启到点唤醒；关机时不会自动启动。在时段内唤醒后会运行至原定结束时间。").font(.system(size: 10)).foregroundStyle(BeatStyle.muted)
             Text("手动停止或保护停止后，本时段不会重启；已有手动会话时跳过该时段。").font(.system(size: 10)).foregroundStyle(BeatStyle.muted)
             Divider()
             HStack { Text("MacBeat \(Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "开发版")").foregroundStyle(BeatStyle.muted); Spacer(); Button("退出") { NSApplication.shared.terminate(nil) } }.font(.system(size: 10))

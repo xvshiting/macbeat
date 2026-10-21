@@ -16,6 +16,13 @@ import MacBeatCore
     @Published private(set) var savedDailySchedule: DailySchedule
     @Published private(set) var scheduledSession = false
     @Published var scheduleNotice = ""
+    @Published var wakeNotice = ""
+    @Published private(set) var savingSchedule = false
+    @Published private(set) var nextWake: Date?
+    private let wakeScheduler: WakeScheduling?
+    private var wakeSyncInProgress = false
+    private var lastWakeSync = Date.distantPast
+    private var wakeObserver: NSObjectProtocol?
     private let defaults: UserDefaults
     private let persistSettings: Bool
     private var lastScheduledStart: Date?
@@ -55,7 +62,7 @@ import MacBeatCore
     var running: Bool { phase == "running" }
     var startFailed: Bool { phase == "startFailed" }
     var statusText: String { running ? "运行中" : busy ? "处理中" : startFailed ? "开启失败" : needsRecovery ? "需要恢复" : "未开启" }
-    var busy: Bool { restoringNormalSleep || phase == "starting" || phase == "stopping" || phase == "recovering" || updating }
+    var busy: Bool { savingSchedule || restoringNormalSleep || phase == "starting" || phase == "stopping" || phase == "recovering" || updating }
     var active: Bool { running || busy }
     var plan: SessionPlan {
         SessionPlan(mode: mode, duration: duration, deadline: deadline,
@@ -99,8 +106,9 @@ import MacBeatCore
         return URL(fileURLWithPath: CommandLine.arguments[0]).deletingLastPathComponent().appendingPathComponent("MacBeatAgent")
     }
 
-    init(preview: Bool = false, defaults: UserDefaults? = nil, automaticTicks: Bool = true) {
+    init(preview: Bool = false, defaults: UserDefaults? = nil, automaticTicks: Bool = true, wakeScheduler: WakeScheduling? = nil) {
         self.preview = preview
+        self.wakeScheduler = wakeScheduler ?? (preview ? nil : WakeSchedulerClient())
         self.persistSettings = !preview || defaults != nil
         let settings = defaults ?? (preview ? UserDefaults(suiteName: "MacBeat.preview.\(UUID().uuidString)")! : .standard)
         self.defaults = settings
@@ -131,7 +139,18 @@ import MacBeatCore
         }
         // Inspection is read-only. Another live owner must only be stopped by
         // the user's explicit recovery action, never by opening this app.
-        if !preview { inspect() }
+        if !preview { inspect(); syncWakeSchedule() }
+        if automaticTicks, !preview {
+            wakeObserver = NSWorkspace.shared.notificationCenter.addObserver(forName: NSWorkspace.didWakeNotification, object: nil, queue: .main) { [weak self] _ in
+                Task { @MainActor in
+                    guard let self else { return }
+                    // Do not wait for unlock, the next polling tick, or a stale
+                    // power snapshot: the agent validates fresh power itself.
+                    self.now = Date(); self.evaluateDailySchedule(at: self.now)
+                    self.syncWakeSchedule()
+                }
+            }
+        }
     }
     func tick(at date: Date = Date()) {
         now = date
@@ -142,6 +161,7 @@ import MacBeatCore
         if preview, running, let end, now >= end { stop(manual: false) }
         if !active, !preview, Int(now.timeIntervalSince1970) % 10 == 0 { inspect() }
         evaluateDailySchedule(at: now)
+        if now.timeIntervalSince(lastWakeSync) >= 60 { syncWakeSchedule() }
         statusChanged?()
     }
     func start() {
@@ -266,6 +286,7 @@ import MacBeatCore
             dailySchedule.enabled = false; savedDailySchedule.enabled = false
             if persistSettings, let data = try? JSONEncoder().encode(savedDailySchedule) { defaults.set(data, forKey: "dailySchedule") }
             scheduleNotice = "恢复正常睡眠后，每日计划已关闭。"
+            syncWakeSchedule(force: true)
         }
         sleepRestoreReport = report; restoringNormalSleep = false; schedulingPaused = previouslyPaused
         recoveryNotice = ""; message = ""
@@ -353,7 +374,7 @@ import MacBeatCore
         defaults.set(lockOnLidClose, forKey: "lockOnLidClose")
     }
     var scheduleValidation: String? {
-        !dailySchedule.isValid ? "请使用当天 00:00–24:00 的有效时段，并合并重叠时段。" : nil
+        !dailySchedule.isValid || dailySchedule.periods.count > 48 ? "请使用最多 48 个有效当天时段，并合并重叠时段。" : nil
     }
     var scheduleChanged: Bool { dailySchedule != savedDailySchedule }
     var scheduleSummary: String {
@@ -375,20 +396,70 @@ import MacBeatCore
     }
     func saveDailySchedule(at date: Date = Date(), calendar: Calendar = .current) {
         guard !active, scheduleValidation == nil else { return }
-        savedDailySchedule = dailySchedule
-        if persistSettings, let data = try? JSONEncoder().encode(dailySchedule) {
+        let draft = dailySchedule
+        guard let wakeScheduler else { commitDailySchedule(draft, at: date, calendar: calendar); return }
+        savingSchedule = true
+        // Do not commit a draft if authorization is cancelled or RTC setup fails.
+        wakeScheduler.configure(draft, authorize: true) { [weak self] result in
+            guard let self else { return }
+            self.savingSchedule = false
+            switch result {
+            case .success(let status):
+                self.nextWake = status.nextWake; self.updateWakeNotice(draft)
+                self.commitDailySchedule(draft, at: self.preview ? date : Date(), calendar: calendar)
+            case .failure(let error): self.wakeNotice = error.localizedDescription
+            }
+            self.statusChanged?(); self.safeToQuit?()
+        }
+    }
+    private func commitDailySchedule(_ schedule: DailySchedule, at date: Date, calendar: Calendar) {
+        savedDailySchedule = schedule
+        if persistSettings, let data = try? JSONEncoder().encode(schedule) {
             defaults.set(data, forKey: "dailySchedule")
         }
         saveSettings()
-        scheduleNotice = dailySchedule.enabled ? "已保存每日定时。" : "已关闭每日定时。"
+        scheduleNotice = schedule.enabled ? "已保存每日定时。" : "已关闭每日定时。"
         now = date
         evaluateDailySchedule(at: date, calendar: calendar)
+    }
+    private func updateWakeNotice(_ schedule: DailySchedule) {
+        if let nextWake { wakeNotice = "已预约唤醒：" + nextWake.formatted(.dateTime.month().day().hour().minute()) }
+        else { wakeNotice = schedule.enabled && schedule.wakeComputer ? "暂无需要唤醒的时段。" : "MacBeat 的唤醒预约已撤销。" }
+    }
+    private func syncWakeSchedule(force: Bool = false) {
+        guard !savingSchedule, (!wakeSyncInProgress || force), (!schedulingPaused || force), let wakeScheduler else { return }
+        lastWakeSync = Date()
+        guard savedDailySchedule.wakeComputer || nextWake != nil else { return }
+        wakeSyncInProgress = true
+        let schedule = savedDailySchedule
+        wakeScheduler.configure(schedule, authorize: false) { [weak self] result in
+            guard let self else { return }; self.wakeSyncInProgress = false
+            guard !self.savingSchedule, self.savedDailySchedule == schedule else { return }
+            switch result {
+            case .success(let status): self.nextWake = status.nextWake; self.updateWakeNotice(schedule)
+            case .failure(let error): self.nextWake = nil; self.wakeNotice = error.localizedDescription
+            }
+        }
+    }
+    func disconnectWakeScheduler() { wakeScheduler?.disconnect() }
+    var wakeServiceInstalled: Bool { !preview && FileManager.default.isExecutableFile(atPath: WakeService.executable) }
+    func removeWakeService() {
+        guard !active, !savedDailySchedule.enabled || !savedDailySchedule.wakeComputer, let wakeScheduler else { return }
+        savingSchedule = true
+        wakeScheduler.remove { [weak self] result in
+            guard let self else { return }; self.savingSchedule = false
+            switch result {
+            case .success: self.nextWake = nil; self.wakeNotice = "唤醒服务已移除。"
+            case .failure(let error): self.wakeNotice = error.localizedDescription
+            }
+            self.safeToQuit?()
+        }
     }
     func evaluateDailySchedule(at date: Date, calendar: Calendar = .current) {
         // A scheduled session may be handing off at midnight or a boundary.
         // Do not consume the next window while the old agent is stopping.
         if scheduledSession && active, let end, date >= end { return }
-        guard !schedulingPaused,
+        guard !schedulingPaused, !savingSchedule,
               let window = savedDailySchedule.currentWindow(at: date, calendar: calendar),
               lastScheduledStart.map({ $0 < window.start }) ?? true else { return }
         // Consume before launching. A stop, failure, crash, or relaunch must not

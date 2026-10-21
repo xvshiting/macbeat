@@ -23,6 +23,14 @@ Keep downloads, computations, and local services running while you step away. St
 
 **Your Mac stays awake. Its display can still turn off.** MacBeat does not currently offer an always-on display mode. The native app's current interface is in Simplified Chinese; this README and the website are available in English and Chinese.
 
+## In development: wake for a daily plan (0.4.0)
+
+This source branch adds **Wake Mac at start** in Daily plan; the published download is still v0.3.0. Enable the option and save the plan. macOS requests administrator authorization once to install a dedicated wake service. The service books the next daily window using the public IOKit power-event API and continues with later windows as they arrive. It does not use the system-wide repeating schedule slot or change other apps’ bookings.
+
+Keep MacBeat running and stay signed in; locking the screen is fine. Use AC power for testing. This is a request to wake from sleep, **not to start a shut-down Mac or unlock the screen**. Hardware, lid position, and power state affect actual wake behavior; a real sleep-to-wake test on the target Mac is still required.
+
+Saving a disabled plan, turning off wake scheduling, restoring normal sleep, or quitting the app cancels MacBeat’s own booking. If authorization is cancelled, the new draft is not saved. With wake disabled and the plan paused, **Remove wake service…** removes the optional service with system authorization. An app update may require authorizing the service again because it accepts only the approved app signature.
+
 ## What’s new in v0.3.0
 
 - Set a duration on a 24-hour dial or enter an exact finish time.
@@ -142,7 +150,7 @@ Look for a confirmed closed lid, uninterrupted observations, and no increase in 
 
 The interface uses **SwiftUI and AppKit**. A separate `MacBeatAgent` owns IOKit idle-sleep assertions and invokes the closed-lid interface when enabled. There are no third-party Swift package dependencies, telemetry, accounts, or required network services.
 
-Normal keep-awake sessions do not change persistent power settings. The separate **Restore normal sleep** action uses `pmset` with macOS administrator authorization to set `disablesleep` to 0. Power profiles with automatic system sleep disabled (`sleep 0`) are set to a 10-minute idle timer; existing nonzero timers are preserved. MacBeat does not install a privileged daemon. Tests never execute this system reset.
+Normal keep-awake sessions do not change persistent power settings. The separate **Restore normal sleep** action uses `pmset` with macOS administrator authorization to set `disablesleep` to 0. Power profiles with automatic system sleep disabled (`sleep 0`) are set to a 10-minute idle timer; existing nonzero timers are preserved. Ordinary sessions do not install a privileged daemon. The optional 0.4.0 wake feature installs the dedicated service described above, only after administrator authorization. Tests never execute this system reset or install the wake service.
 
 Sessions end on their deadline, manual stop, a lost client connection, low battery, elevated thermal pressure, or a violation of the selected power policy. A separate recovery process and a local journal help restore state if the control process exits unexpectedly. Recovery failures appear in the interface and are retried.
 
@@ -175,7 +183,7 @@ The DMG and SHA-256 file are written to `dist/`. Packaging uses a separate stagi
 conda run -n kora swift test
 ```
 
-There are 73 policy, scheduling, controller, and recovery-store tests, including legacy migration, multiple daily windows, midnight handoff, overlap merging, arc movement, daylight-saving transitions, stop suppression, lock ownership, token-matched cooperative stop requests, authorization cancellation, partial reset failures, and actual assertion inspection.
+There are 85 policy, scheduling, controller, and recovery-store tests, including legacy migration, multiple daily windows, midnight handoff, overlap merging, arc movement, daylight-saving transitions, stop suppression, lock ownership, token-matched cooperative stop requests, authorization cancellation, partial reset failures, and actual assertion inspection.
 
 The following integration checks briefly acquire real power assertions. Stop any MacBeat session and keep the lid open before running them:
 

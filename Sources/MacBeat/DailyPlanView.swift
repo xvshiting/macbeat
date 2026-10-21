@@ -31,6 +31,16 @@ struct DailyPlanView: View {
             }
             Text(model.dailySchedule.enabled ? "每天重复，让运行与休息各有时刻。" : "计划已暂停，时段会为你保留。")
                 .font(.system(size: 10)).foregroundStyle(BeatStyle.muted)
+            VStack(alignment: .leading, spacing: 8) {
+                Toggle(isOn: $model.dailySchedule.wakeComputer) {
+                    Label("到点唤醒 Mac", systemImage: "sunrise")
+                }.toggleStyle(.switch).controlSize(.small).disabled(model.active)
+                Text("保存后预约下一时段。首次需要管理员授权；建议接通电源并保持 MacBeat 运行。唤醒不会自动解锁，也不会从关机状态启动。").font(.system(size: 10)).foregroundStyle(BeatStyle.muted)
+                if !model.wakeNotice.isEmpty { Text(model.wakeNotice).font(.system(size: 10)).foregroundStyle(BeatStyle.muted) }
+                if model.wakeServiceInstalled && (!model.savedDailySchedule.enabled || !model.savedDailySchedule.wakeComputer) {
+                    Button("移除唤醒服务…") { model.removeWakeService() }.buttonStyle(.plain).font(.system(size: 10)).foregroundStyle(BeatStyle.muted).disabled(model.active || model.preview)
+                }
+            }.beatCard(padding: 14)
             circle
             if let period = selection { editor(period).id(period.id) }
             HStack { Text("全部时段"); Spacer(); Text("\(model.dailySchedule.periods.filter(\.enabled).count) 段已启用") }.font(.system(size: 10)).foregroundStyle(BeatStyle.muted)
@@ -38,9 +48,9 @@ struct DailyPlanView: View {
             Button { add() } label: { Label("添加一个时段", systemImage: "plus") }.buttonStyle(.plain).font(.system(size: 11)).foregroundStyle(BeatStyle.blue).disabled(model.active)
             if !error.isEmpty { Text(error).font(.system(size: 10)).foregroundStyle(.orange) }
             if let validation = model.scheduleValidation { Text(validation).font(.system(size: 10)).foregroundStyle(.orange) }
-            Text(model.active ? "停止当前运行后可编辑计划。" : "仅在所选时段保持运行。请保持 MacBeat 开启，计划才会执行。")
+            Text(model.active ? "正在运行或保存，暂时不能编辑计划。" : "仅在所选时段保持运行。请保持 MacBeat 开启，计划才会执行。")
                 .font(.system(size: 10)).foregroundStyle(BeatStyle.muted)
-            BeatPrimary(title: model.scheduleChanged ? "保存每日计划" : "计划已保存", symbol: "checkmark", disabled: model.active || !model.scheduleChanged || model.scheduleValidation != nil) { model.saveDailySchedule() }
+            BeatPrimary(title: model.savingSchedule ? "正在设置…" : model.scheduleChanged ? "保存每日计划" : "计划已保存", symbol: "checkmark", disabled: model.active || (!model.scheduleChanged && !model.savedDailySchedule.wakeComputer) || model.scheduleValidation != nil) { model.saveDailySchedule() }
             if !model.scheduleNotice.isEmpty { Text(model.scheduleNotice).font(.system(size: 10)).foregroundStyle(BeatStyle.muted) }
             if !model.nextScheduleText.isEmpty { Text(model.nextScheduleText).font(.system(size: 10)).foregroundStyle(BeatStyle.muted) }
         }
