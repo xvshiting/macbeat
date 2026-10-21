@@ -13,7 +13,7 @@
 <p align="center"><strong>English</strong> · <a href="README.zh-CN.md">简体中文</a></p>
 <p align="center">
   <a href="https://xvshiting.github.io/macbeat/"><strong>Website</strong></a> ·
-  <a href="https://github.com/xvshiting/macbeat/releases/tag/v0.3.0"><strong>Download DMG</strong></a> ·
+  <a href="https://github.com/xvshiting/macbeat/releases/tag/v0.4.0"><strong>Download DMG</strong></a> ·
   <a href="#getting-started">Getting started</a> ·
   <a href="#compatibility-and-real-world-testing">Compatibility</a> ·
   <a href="#build-from-source">Build from source</a>
@@ -23,15 +23,15 @@ Keep downloads, computations, and local services running while you step away. St
 
 **Your Mac stays awake. Its display can still turn off.** MacBeat does not currently offer an always-on display mode. The native app's current interface is in Simplified Chinese; this README and the website are available in English and Chinese.
 
-## In development: wake for a daily plan (0.4.0)
+## New in v0.4.0: wake for a daily plan
 
-This source branch adds **Wake Mac at start** in Daily plan; the published download is still v0.3.0. Enable the option and save the plan. macOS requests administrator authorization once to install a dedicated wake service. The service books the next daily window using the public IOKit power-event API and continues with later windows as they arrive. It does not use the system-wide repeating schedule slot or change other apps’ bookings.
+**Wake Mac at start** is available in Daily plan and is off by default. Enable the option and save the plan. macOS requests administrator authorization once to install a dedicated wake service. The service books the next daily window using the public IOKit power-event API and continues with later windows as they arrive. It does not use the system-wide repeating schedule slot or change other apps’ bookings.
 
-Keep MacBeat running and stay signed in; locking the screen is fine. Use AC power for testing. This is a request to wake from sleep, **not to start a shut-down Mac or unlock the screen**. Hardware, lid position, and power state affect actual wake behavior; a real sleep-to-wake test on the target Mac is still required.
+Keep MacBeat running and stay signed in; locking the screen is fine. Use AC power for testing. This is a request to wake from sleep, **not to start a shut-down Mac or unlock the screen**. Hardware, lid position, and power state affect actual wake behavior; **Privileged service installation and a real sleep-to-wake cycle have not yet been verified on a physical Mac.** Treat this as an experimental feature and test your own setup before relying on it.
 
-Saving a disabled plan, turning off wake scheduling, restoring normal sleep, or quitting the app cancels MacBeat’s own booking. If authorization is cancelled, the new draft is not saved. With wake disabled and the plan paused, **Remove wake service…** removes the optional service with system authorization. An app update may require authorizing the service again because it accepts only the approved app signature.
+Saving a disabled plan, turning off wake scheduling, restoring normal sleep, or quitting the app cancels MacBeat’s own booking. If authorization is cancelled, the new draft is not saved. Once the plan is paused or wake scheduling is off, **Remove wake service…** removes the optional service with system authorization. An app update may require authorizing the service again because it accepts only the approved app signature.
 
-## What’s new in v0.3.0
+## Core interface
 
 - Set a duration on a 24-hour dial or enter an exact finish time.
 - Arrange multiple daily windows on a second dial; move or resize existing arcs and merge overlaps with confirmation.
@@ -56,6 +56,7 @@ Saving a disabled plan, turning off wake scheduling, restoring normal sleep, or 
 | Adjust an active session | Changes take effect only after you apply the updated end time |
 | Battery and thermal protection | Optional AC-only operation, low-battery threshold, and stopping under elevated thermal pressure |
 | Daily schedule | Multiple same-day windows on a 24-hour dial, with drag editing and overlap merging |
+| Wake Mac at start (experimental) | Optional administrator-authorized service to request wake from sleep at the next window; off by default |
 | Restore normal sleep | End MacBeat keep-awake, reset global sleep restrictions, and show remaining blockers |
 | Launch at login | Starts in standby, or checks the current window if you enabled a daily schedule |
 
@@ -67,9 +68,9 @@ The menu bar icon uses a white heartbeat on a colored background: **blue** for s
 
 ## Download and install
 
-The current release is **v0.3.0 (prerelease)**, with the native dial interface, multiple daily windows, sleep recovery, and default-on locking when the lid closes.
+The current release is **v0.4.0 (prerelease)**, adding optional wake scheduling to the native dial interface, multiple daily windows, sleep recovery, and default-on locking when the lid closes.
 
-1. Download `MacBeat-0.3.0-arm64.dmg` from [Releases](https://github.com/xvshiting/macbeat/releases/tag/v0.3.0).
+1. Download `MacBeat-0.4.0-arm64.dmg` from [Releases](https://github.com/xvshiting/macbeat/releases/tag/v0.4.0).
 2. Open the DMG and **drag MacBeat.app into Applications**.
 3. Open MacBeat from Applications. Find its heartbeat icon in the menu bar; it has no Dock icon.
 
@@ -84,7 +85,7 @@ Confirm that the file came from this repository's Release and verify its checksu
 Download the `.sha256` file from the same release, then run this in your download directory:
 
 ```sh
-shasum -a 256 -c MacBeat-0.3.0-arm64.dmg.sha256
+shasum -a 256 -c MacBeat-0.4.0-arm64.dmg.sha256
 ```
 
 To update, stop your session and quit the old version before replacing the app. Start a new session after reopening it.
@@ -103,7 +104,7 @@ Open the **Daily plan** (每日计划) tab. Drag a blank arc to add a window; dr
 
 Times stay within **00:00–24:00**. For overnight work, use two windows, such as 22:00–24:00 and 00:00–02:00. Existing single-window settings are migrated automatically, including overnight settings. The plan is disabled by default.
 
-- MacBeat must be running. Enable **Launch at login** if you want the schedule available after signing in. This feature does not wake a sleeping Mac or power on a shut-down Mac.
+- MacBeat must be running. Enable **Launch at login** if you want the schedule available after signing in. Without **Wake Mac at start**, a sleeping Mac must wake by another means. With it enabled and saved, MacBeat requests a system wake for the next window. Neither mode powers on a shut-down Mac or unlocks the screen.
 - Saving a schedule, launching the app, or waking during an unhandled window starts a session until that window's original end. A fully missed window is skipped.
 - Each window is attempted once. Manual stop, startup failure, low battery, or thermal protection does not cause repeated starts in the same window, including after relaunch. You can still start a manual session yourself.
 - An existing manual session takes priority: the scheduled window is skipped and does not change or stop it. Automatic stop applies to the session started by the schedule.
